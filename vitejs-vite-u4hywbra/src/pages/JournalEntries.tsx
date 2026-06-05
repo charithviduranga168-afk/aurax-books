@@ -1,0 +1,1 @@
+export default function JournalEntries() { return <div><div className="page-header"><div className="page-title">JournalEntries</div></div><div className="card" style={{textAlign:"center",padding:"60px"}}><div style={{fontSize:"48px"}}>🚧</div><h3>Coming Soon</h3></div></div> }
