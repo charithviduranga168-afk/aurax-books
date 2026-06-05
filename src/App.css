@@ -7,10 +7,10 @@
 }
 
 :root {
-  --brand: #4f35c8;
-  --brand-dark: #3a26a0;
+  --brand: #7258e7;
+  --brand-dark: #654fd6;
   --brand-light: #ede9ff;
-  --accent: #6c47ff;
+  --accent: #6a4ce3;
 
   --bg: #f5f6fa;
   --bg2: #ffffff;
@@ -21,13 +21,13 @@
   --text2: #5a5f7a;
   --text3: #9096b0;
 
-  --green: #12b76a;
+  --green: #7cf1ba;
   --green-bg: #ecfdf3;
-  --red: #f04438;
+  --red: #f79993;
   --red-bg: #fef3f2;
-  --yellow: #f79009;
+  --yellow: #fcc379;
   --yellow-bg: #fffaeb;
-  --blue: #2e90fa;
+  --blue: #6cabee;
   --blue-bg: #eff8ff;
 
   --sidebar-w: 220px;
@@ -54,7 +54,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: linear-gradient(135deg, #3a26a0 0%, #6c47ff 100%);
+  background: linear-gradient(135deg, #7d67e9 0%, #886df4 100%);
 }
 .splash-logo {
   font-size: 48px;
@@ -80,7 +80,7 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-  background: linear-gradient(180deg, #3a26a0 0%, #4f35c8 60%, #5f42d8 100%);
+  background: linear-gradient(180deg, #554a8d 0%, #7358ed 60%, #7c60ee 100%);
   display: flex;
   flex-direction: column;
   transition: width 0.2s ease;
