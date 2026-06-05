@@ -46,7 +46,6 @@ export default function Reports() {
 
     const revenue = invoices.reduce((s: number, i: any) => s + (i.subtotal || i.total || 0), 0)
 
-    // Get COGS for invoices in date range
     const invIds = invoices.map((i: any) => i.id).filter(Boolean)
     let cogs = 0
     if (invIds.length > 0) {
@@ -111,12 +110,13 @@ export default function Reports() {
   }
 
   async function loadBalanceSheet(userId: string) {
-    const [invRes, billRes, expRes, recRes, payRes] = await Promise.all([
+    const [invRes, billRes, expRes, recRes, payRes, prodRes] = await Promise.all([
       supabase.from('invoices').select('balance,total').eq('user_id', userId),
       supabase.from('bills').select('balance,total').eq('user_id', userId),
       supabase.from('expenses').select('amount').eq('user_id', userId),
       supabase.from('receipts').select('amount').eq('user_id', userId),
       supabase.from('payments').select('amount').eq('user_id', userId),
+      supabase.from('products').select('stock_quantity,cost_price').eq('user_id', userId),
     ])
 
     const totalReceivables = (invRes.data || []).reduce((s: number, i: any) => s + (i.balance || 0), 0)
@@ -127,19 +127,27 @@ export default function Reports() {
     const cashBalance = totalReceipts - totalPayments - totalExpenses
     const totalRevenue = (invRes.data || []).reduce((s: number, i: any) => s + (i.total || 0), 0)
     const totalCosts = (billRes.data || []).reduce((s: number, b: any) => s + (b.total || 0), 0)
+    const stockValue = (prodRes.data || []).reduce((s: number, p: any) => s + ((p.stock_quantity || 0) * (p.cost_price || 0)), 0)
     const retainedEarnings = totalRevenue - totalCosts - totalExpenses
 
-    setReportData({ type: 'balance', totalReceivables, totalPayables, cashBalance, retainedEarnings, totalRevenue, totalExpenses })
+    setReportData({ type: 'balance', totalReceivables, totalPayables, cashBalance, retainedEarnings, totalRevenue, totalExpenses, stockValue })
   }
 
   const fmt = (n: number) => 'Rs. ' + Math.abs(n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })
+
+  const titles: any = {
+    pnl: 'PROFIT & LOSS STATEMENT',
+    cashflow: 'CASH FLOW STATEMENT',
+    aged_rec: 'AGED RECEIVABLES REPORT',
+    aged_pay: 'AGED PAYABLES REPORT',
+    balance: 'BALANCE SHEET'
+  }
 
   function exportPDF() {
     if (!reportData) return
     const doc = new jsPDF()
     const f = (n: number) => (Math.abs(n || 0)).toLocaleString('en-LK', { minimumFractionDigits: 2 })
 
-    // Header
     doc.setFillColor(248, 249, 252)
     doc.rect(0, 0, 210, 42, 'F')
     doc.setFillColor(79, 53, 200)
@@ -151,13 +159,6 @@ export default function Reports() {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(120, 120, 120)
-    const titles: any = {
-      pnl: 'PROFIT & LOSS STATEMENT',
-      cashflow: 'CASH FLOW STATEMENT',
-      aged_rec: 'AGED RECEIVABLES REPORT',
-      aged_pay: 'AGED PAYABLES REPORT',
-      balance: 'BALANCE SHEET'
-    }
     doc.text(titles[reportData.type] || 'REPORT', 12, 21)
     let cy = 27
     if (company.address) { doc.text(company.address, 12, cy); cy += 5 }
@@ -242,9 +243,10 @@ export default function Reports() {
         head: [['Description', 'Amount (Rs.)']],
         body: [
           ['ASSETS', ''],
-          ['Cash Balance (Est.)', f(reportData.cashBalance)],
+          ['Cash Balance (Est.)', f(Math.max(0, reportData.cashBalance))],
           ['Accounts Receivable', f(reportData.totalReceivables)],
-          ['Total Assets', f(Math.max(0, reportData.cashBalance) + reportData.totalReceivables)],
+          ['Inventory / Stock Value', f(reportData.stockValue)],
+          ['Total Assets', f(Math.max(0, reportData.cashBalance) + reportData.totalReceivables + reportData.stockValue)],
           ['', ''],
           ['LIABILITIES', ''],
           ['Accounts Payable', f(reportData.totalPayables)],
@@ -279,14 +281,6 @@ export default function Reports() {
 
     const filename = titles[reportData.type]?.replace(/ /g, '_') || 'Report'
     doc.save(filename + '_' + fromDate + '.pdf')
-  }
-
-  const titles: any = {
-    pnl: 'PROFIT & LOSS STATEMENT',
-    cashflow: 'CASH FLOW STATEMENT',
-    aged_rec: 'AGED RECEIVABLES REPORT',
-    aged_pay: 'AGED PAYABLES REPORT',
-    balance: 'BALANCE SHEET'
   }
 
   const reportTabs = [
@@ -360,9 +354,9 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Report output */}
       {loading && <div className="empty-state"><p>Generating report...</p></div>}
 
+      {/* P&L Report */}
       {reportData && reportData.type === 'pnl' && (
         <div className="table-wrap">
           <div className="table-toolbar">
@@ -417,6 +411,7 @@ export default function Reports() {
         </div>
       )}
 
+      {/* Cash Flow Report */}
       {reportData && reportData.type === 'cashflow' && (
         <div className="table-wrap">
           <div className="table-toolbar">
@@ -453,6 +448,7 @@ export default function Reports() {
         </div>
       )}
 
+      {/* Aged Receivables / Payables */}
       {reportData && (reportData.type === 'aged_rec' || reportData.type === 'aged_pay') && (
         <div className="table-wrap">
           <div className="table-toolbar">
@@ -509,6 +505,7 @@ export default function Reports() {
         </div>
       )}
 
+      {/* Balance Sheet */}
       {reportData && reportData.type === 'balance' && (
         <div className="table-wrap">
           <div className="table-toolbar">
@@ -528,9 +525,15 @@ export default function Reports() {
                 <td style={{ padding: '10px 16px 10px 32px' }}>Accounts Receivable</td>
                 <td style={{ padding: '10px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(reportData.totalReceivables)}</td>
               </tr>
+              <tr>
+                <td style={{ padding: '10px 16px 10px 32px' }}>Inventory / Stock Value</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(reportData.stockValue)}</td>
+              </tr>
               <tr style={{ borderTop: '1px solid var(--border)', fontWeight: 600 }}>
                 <td style={{ padding: '10px 16px' }}>Total Assets</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>{fmt(Math.max(0, reportData.cashBalance) + reportData.totalReceivables)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(Math.max(0, reportData.cashBalance) + reportData.totalReceivables + reportData.stockValue)}
+                </td>
               </tr>
               <tr style={{ background: 'var(--bg3)' }}>
                 <td style={{ fontWeight: 700, padding: '10px 16px' }}>LIABILITIES</td>
@@ -550,11 +553,15 @@ export default function Reports() {
               </tr>
               <tr>
                 <td style={{ padding: '10px 16px 10px 32px' }}>Retained Earnings</td>
-                <td style={{ padding: '10px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: reportData.retainedEarnings >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmt(reportData.retainedEarnings)}</td>
+                <td style={{ padding: '10px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: reportData.retainedEarnings >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {fmt(reportData.retainedEarnings)}
+                </td>
               </tr>
               <tr style={{ background: '#ecfdf3', borderTop: '2px solid var(--border)' }}>
                 <td style={{ fontWeight: 700, padding: '14px 16px', fontSize: '15px' }}>Total Equity</td>
-                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, fontSize: '15px', color: reportData.retainedEarnings >= 0 ? 'var(--green)' : 'var(--red)', fontVariantNumeric: 'tabular-nums' }}>{fmt(reportData.retainedEarnings)}</td>
+                <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, fontSize: '15px', color: reportData.retainedEarnings >= 0 ? 'var(--green)' : 'var(--red)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(reportData.retainedEarnings)}
+                </td>
               </tr>
             </tbody>
           </table>
