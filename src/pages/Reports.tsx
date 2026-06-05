@@ -36,10 +36,9 @@ export default function Reports() {
   }
 
   async function loadPnL(userId: string) {
-    const [invRes, expRes, billRes] = await Promise.all([
-      supabase.from('invoices').select('total,subtotal,date,customer_name').eq('user_id', userId).gte('date', fromDate).lte('date', toDate),
+    const [invRes, expRes] = await Promise.all([
+      supabase.from('invoices').select('id,total,subtotal,date').eq('user_id', userId).gte('date', fromDate).lte('date', toDate),
       supabase.from('expenses').select('amount,category,date').eq('user_id', userId).gte('date', fromDate).lte('date', toDate),
-      supabase.from('invoice_lines').select('cogs,invoice_id'),
     ])
 
     const invoices = invRes.data || []
@@ -49,12 +48,17 @@ export default function Reports() {
 
     // Get COGS for invoices in date range
     const invIds = invoices.map((i: any) => i.id).filter(Boolean)
-    const allLines = billRes.data || []
-    const cogs = allLines.filter((l: any) => invIds.includes(l.invoice_id)).reduce((s: number, l: any) => s + (l.cogs || 0), 0)
+    let cogs = 0
+    if (invIds.length > 0) {
+      const { data: lines } = await supabase
+        .from('invoice_lines')
+        .select('cogs,invoice_id')
+        .in('invoice_id', invIds)
+      cogs = (lines || []).reduce((s: number, l: any) => s + (l.cogs || 0), 0)
+    }
 
     const grossProfit = revenue - cogs
 
-    // Expenses by category
     const expByCategory: any = {}
     expenses.forEach((e: any) => {
       expByCategory[e.category] = (expByCategory[e.category] || 0) + (e.amount || 0)
@@ -107,9 +111,7 @@ export default function Reports() {
   }
 
   async function loadBalanceSheet(userId: string) {
-    const [custRes, suppRes, invRes, billRes, expRes, recRes, payRes] = await Promise.all([
-      supabase.from('customers').select('balance').eq('user_id', userId),
-      supabase.from('suppliers').select('balance').eq('user_id', userId),
+    const [invRes, billRes, expRes, recRes, payRes] = await Promise.all([
       supabase.from('invoices').select('balance,total').eq('user_id', userId),
       supabase.from('bills').select('balance,total').eq('user_id', userId),
       supabase.from('expenses').select('amount').eq('user_id', userId),
@@ -149,7 +151,13 @@ export default function Reports() {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(120, 120, 120)
-    const titles: any = { pnl: 'PROFIT & LOSS STATEMENT', cashflow: 'CASH FLOW STATEMENT', aged_rec: 'AGED RECEIVABLES REPORT', aged_pay: 'AGED PAYABLES REPORT', balance: 'BALANCE SHEET' }
+    const titles: any = {
+      pnl: 'PROFIT & LOSS STATEMENT',
+      cashflow: 'CASH FLOW STATEMENT',
+      aged_rec: 'AGED RECEIVABLES REPORT',
+      aged_pay: 'AGED PAYABLES REPORT',
+      balance: 'BALANCE SHEET'
+    }
     doc.text(titles[reportData.type] || 'REPORT', 12, 21)
     let cy = 27
     if (company.address) { doc.text(company.address, 12, cy); cy += 5 }
@@ -273,6 +281,14 @@ export default function Reports() {
     doc.save(filename + '_' + fromDate + '.pdf')
   }
 
+  const titles: any = {
+    pnl: 'PROFIT & LOSS STATEMENT',
+    cashflow: 'CASH FLOW STATEMENT',
+    aged_rec: 'AGED RECEIVABLES REPORT',
+    aged_pay: 'AGED PAYABLES REPORT',
+    balance: 'BALANCE SHEET'
+  }
+
   const reportTabs = [
     { id: 'pnl', label: 'P&L' },
     { id: 'balance', label: 'Balance Sheet' },
@@ -302,7 +318,7 @@ export default function Reports() {
             key={tab.id}
             onClick={() => { setActiveReport(tab.id); setReportData(null) }}
             style={{
-              padding: '8px 16px', borderRadius: '8px', border: 'none',
+              padding: '8px 16px', borderRadius: '8px',
               cursor: 'pointer', fontSize: '13px', fontWeight: 600,
               background: activeReport === tab.id ? 'var(--brand)' : 'var(--bg2)',
               color: activeReport === tab.id ? '#fff' : 'var(--text2)',
@@ -448,7 +464,11 @@ export default function Reports() {
             </div>
           </div>
           {reportData.items.length === 0 ? (
-            <div className="empty-state"><div className="empty-state-icon">✅</div><h3>All clear!</h3><p>No outstanding {reportData.type === 'aged_rec' ? 'receivables' : 'payables'}</p></div>
+            <div className="empty-state">
+              <div className="empty-state-icon">✅</div>
+              <h3>All clear!</h3>
+              <p>No outstanding {reportData.type === 'aged_rec' ? 'receivables' : 'payables'}</p>
+            </div>
           ) : (
             <table>
               <thead>
@@ -543,7 +563,7 @@ export default function Reports() {
 
       {!reportData && !loading && (
         <div className="empty-state">
-          <div className="empty-state-icon">📊</div>
+          <div className="empty-state-icon">📈</div>
           <h3>Select a report and click Generate</h3>
           <p>Choose a report type above, set the date range, and click Generate Report</p>
         </div>
