@@ -16,6 +16,7 @@ import Reports from './pages/Reports';
 import Manufacturing from './pages/Manufacturing';
 import Categories from './pages/Categories';
 import Settings from './pages/Settings';
+import ChartOfAccounts from './pages/ChartOfAccounts';
 import './App.css';
 
 export type Page =
@@ -33,7 +34,8 @@ export type Page =
   | 'reports'
   | 'manufacturing'
   | 'settings'
-  | 'categories';
+  | 'categories'
+  | 'coa';
 
 const menuGroups = [
   {
@@ -63,6 +65,7 @@ const menuGroups = [
   {
     label: 'Accounting',
     items: [
+      { page: 'coa', label: 'Chart of Accounts' },
       { page: 'expenses', label: 'Expenses' },
       { page: 'journal', label: 'Journal Entries' },
     ],
@@ -156,6 +159,8 @@ export default function App() {
         return <Categories />;
       case 'settings':
         return <Settings />;
+      case 'coa':
+        return <ChartOfAccounts />;
       default:
         return <Dashboard nav={nav} />;
     }
@@ -190,9 +195,7 @@ export default function App() {
             return (
               <div key={group.label} className="nav-module">
                 <button
-                  className={`nav-module-header ${
-                    hasActive ? 'has-active' : ''
-                  }`}
+                  className={`nav-module-header ${hasActive ? 'has-active' : ''}`}
                   onClick={() => sidebarOpen && toggleGroup(group.label)}
                 >
                   <span className="nav-module-label">
@@ -208,9 +211,7 @@ export default function App() {
                     {group.items.map((item) => (
                       <button
                         key={item.page}
-                        className={`nav-sub-item ${
-                          page === item.page ? 'active' : ''
-                        }`}
+                        className={`nav-sub-item ${page === item.page ? 'active' : ''}`}
                         onClick={() => nav(item.page as Page)}
                       >
                         {item.label}
