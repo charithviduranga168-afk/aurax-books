@@ -232,7 +232,7 @@ export default function App() {
       case 'coa':
         return <ChartOfAccounts />;
       case 'pos':
-        return <PointOfSale />;
+        return <PointOfSale nav={nav} />;
       case 'subscription':
         return <Subscription />;
       default:
