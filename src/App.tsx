@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Suppliers from './pages/Suppliers';
 import Products from './pages/Products';
+import Inventory from './pages/Inventory';
 import Invoices from './pages/Invoices';
 import Receipts from './pages/Receipts';
 import Bills from './pages/Bills';
@@ -30,6 +31,7 @@ export type Page =
   | 'payments'
   | 'expenses'
   | 'grn'
+  | 'inventory'
   | 'journal'
   | 'reports'
   | 'manufacturing'
@@ -60,6 +62,7 @@ const menuGroups = [
     items: [
       { page: 'products', label: 'Products' },
       { page: 'categories', label: 'Categories' },
+      { page: 'inventory', label: 'Stock & Movements' },
     ],
   },
   {
@@ -138,6 +141,8 @@ export default function App() {
         return <Suppliers />;
       case 'products':
         return <Products />;
+      case 'inventory':
+        return <Inventory />;
       case 'invoices':
         return <Invoices />;
       case 'receipts':
