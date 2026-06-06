@@ -112,6 +112,11 @@ export default function Subscription() {
   }
 
   function payViaPayHere() {
+    if (!AURAX_PAYHERE_MERCHANT) {
+      showAlert('PayHere is not configured. Please check your environment setup.');
+      return;
+    }
+
     const orderId = `AURAX-SUB-${user.id.slice(0, 8)}-${Date.now()}`;
     const amount = monthlyTotal.toFixed(2);
     const currency = 'LKR';
@@ -131,16 +136,11 @@ export default function Subscription() {
     const secretHash = md5(AURAX_PAYHERE_SECRET).toUpperCase();
     const hash = md5(AURAX_PAYHERE_MERCHANT + orderId + amount + currency + secretHash).toUpperCase();
 
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://www.payhere.lk/pay/checkout';
-    form.target = '_blank';
-
     const fields: Record<string, string> = {
       merchant_id: AURAX_PAYHERE_MERCHANT,
       return_url: window.location.origin,
       cancel_url: window.location.origin,
-      notify_url: 'https://pvxubbkbyvruceoofpkt.supabase.co/functions/v1/payhere-notify',
+      notify_url: '',
       order_id: orderId,
       items: `Aurax Books Subscription — ${currentPeriod} (${totalUsers} user${totalUsers > 1 ? 's' : ''})`,
       currency,
@@ -155,6 +155,12 @@ export default function Subscription() {
       hash,
     };
 
+    // Navigate current tab to PayHere (avoids popup blocker on programmatic form submit)
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://www.payhere.lk/pay/checkout';
+    form.style.display = 'none';
+
     for (const [k, v] of Object.entries(fields)) {
       const inp = document.createElement('input');
       inp.type = 'hidden';
@@ -165,7 +171,6 @@ export default function Subscription() {
 
     document.body.appendChild(form);
     form.submit();
-    document.body.removeChild(form);
   }
 
   function payViaPayPal() {
@@ -179,9 +184,9 @@ export default function Subscription() {
       payment_ref: orderId,
       status: 'Pending',
     });
-    // Open PayPal.me link (amount in USD approximate — Rs. 360 ≈ $1)
+    // Navigate to PayPal.me (amount in USD — Rs. 360 ≈ $1)
     const usd = (monthlyTotal / 360).toFixed(2);
-    window.open(`https://paypal.me/auraxbooks/${usd}`, '_blank');
+    window.location.href = `https://paypal.me/auraxbooks/${usd}`;
   }
 
   const tabStyle = (i: number) => ({

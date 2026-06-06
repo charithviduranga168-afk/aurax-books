@@ -562,8 +562,8 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = 'https://sandbox.payhere.lk/pay/checkout';
-    form.target = '_blank';
+    form.action = 'https://www.payhere.lk/pay/checkout';
+    form.style.display = 'none';
 
     const fields: Record<string, string> = {
       merchant_id: merchantId,
@@ -594,7 +594,6 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
 
     document.body.appendChild(form);
     form.submit();
-    document.body.removeChild(form);
   }
 
   const fmt = (n: number) =>
