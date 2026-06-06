@@ -13,9 +13,11 @@ interface LineItem {
 
 interface Props {
   onCreateGrn?: (bill: any, lines: any[]) => void;
+  prefillFromPO?: { po: any; lines: any[] } | null;
+  onConsumePOPrefill?: () => void;
 }
 
-export default function Bills({ onCreateGrn }: Props = {}) {
+export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }: Props = {}) {
   const [bills, setBills] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -42,9 +44,29 @@ export default function Bills({ onCreateGrn }: Props = {}) {
     { product_id: '', product_name: '', qty: 1, unit_cost: 0, line_total: 0 },
   ]);
 
+  useEffect(() => { loadData(); }, []);
+
+  // Pre-fill Bill form when navigated from a Purchase Order → Create Bill
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!prefillFromPO) return;
+    const { po, lines: poLines } = prefillFromPO;
+    setForm(f => ({
+      ...f,
+      supplier_id: po.supplier_id || '',
+      notes: `Ref: ${po.po_number}`,
+    }));
+    setLines(
+      (poLines || []).map((l: any) => ({
+        product_id: l.product_id,
+        product_name: l.product_name,
+        qty: l.qty,
+        unit_cost: l.unit_cost,
+        line_total: l.line_total,
+      }))
+    );
+    setShowForm(true);
+    onConsumePOPrefill?.();
+  }, [prefillFromPO]);
 
   async function loadData() {
     const {

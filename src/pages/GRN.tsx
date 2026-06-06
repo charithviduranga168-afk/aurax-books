@@ -272,11 +272,19 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
         const isFull = viewLines.every((l) => (l.received_qty || 0) >= (l.ordered_qty || 0));
         const newStatus = isFull ? 'Received' : 'Partial';
         await supabase.from('grn_headers').update({ status: newStatus }).eq('id', grn.id);
+        // Update linked Bill if GRN came from a Bill
         if (grn.bill_id) {
-          await supabase
-            .from('bills')
-            .update({ status: isFull ? 'Received' : 'Partial' })
-            .eq('id', grn.bill_id);
+          await supabase.from('bills').update({ status: newStatus }).eq('id', grn.bill_id);
+        }
+        // Update linked PO if GRN came from a Purchase Order (bill_number = po_number, no bill_id)
+        if (!grn.bill_id && grn.bill_number && /^PO-/i.test(grn.bill_number)) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('purchase_orders')
+              .update({ status: newStatus })
+              .eq('po_number', grn.bill_number)
+              .eq('user_id', user.id);
+          }
         }
         setShowView(false);
         loadAll();
@@ -454,7 +462,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
           marginBottom: '20px',
         }}
       >
-        {chip(`Bill (${billNumber || '—'})`, 'done')}
+        {chip(billNumber?.startsWith('PO-') ? `PO (${billNumber})` : `Bill (${billNumber || '—'})`, 'done')}
         {arrow}
         {chip(grnNumber ? `GRN (${grnNumber})` : 'GRN — pending', grnNumber ? 'done' : 'pending')}
         {arrow}
@@ -506,7 +514,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
                 <input value={form.supplier_name} disabled />
               </div>
               <div className="form-group">
-                <label>Linked Bill</label>
+                <label>{form.bill_number?.startsWith('PO-') ? 'Linked PO' : 'Linked Bill'}</label>
                 <input value={form.bill_number || '—'} disabled />
               </div>
               <div className="form-group">
@@ -712,7 +720,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
                   { label: 'Supplier', value: viewGrn.supplier_name },
                   { label: 'Status', value: viewGrn.status },
                   { label: 'GRN Date', value: viewGrn.date },
-                  { label: 'Linked Bill', value: viewGrn.bill_number || '—' },
+                  { label: viewGrn.bill_number?.startsWith('PO-') ? 'Linked PO' : 'Linked Bill', value: viewGrn.bill_number || '—' },
                 ].map((f) => (
                   <div key={f.label} style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, marginBottom: '4px' }}>

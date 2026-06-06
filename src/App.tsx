@@ -18,6 +18,7 @@ import Manufacturing from './pages/Manufacturing';
 import Categories from './pages/Categories';
 import Settings from './pages/Settings';
 import ChartOfAccounts from './pages/ChartOfAccounts';
+import PurchaseOrders from './pages/PurchaseOrders';
 import './App.css';
 
 export type Page =
@@ -27,6 +28,7 @@ export type Page =
   | 'products'
   | 'invoices'
   | 'receipts'
+  | 'purchaseorders'
   | 'bills'
   | 'payments'
   | 'expenses'
@@ -52,7 +54,8 @@ const menuGroups = [
     label: 'Purchasing',
     items: [
       { page: 'suppliers', label: 'Suppliers' },
-      { page: 'bills', label: 'Bills' },
+      { page: 'purchaseorders', label: 'Purchase Orders' },
+      { page: 'bills', label: 'Vendor Bills' },
       { page: 'payments', label: 'Payments' },
       { page: 'grn', label: 'Goods Received' },
     ],
@@ -92,6 +95,7 @@ export default function App() {
     menuGroups.map((g) => g.label)
   );
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
+  const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -147,6 +151,23 @@ export default function App() {
         return <Invoices />;
       case 'receipts':
         return <Receipts />;
+      case 'purchaseorders':
+        return (
+          <PurchaseOrders
+            nav={nav}
+            onReceiveProducts={(po, lines) => {
+              setGrnPrefill({
+                bill: { id: null, bill_number: po.po_number, supplier_id: po.supplier_id, supplier_name: po.supplier_name },
+                lines: lines.map((l: any) => ({ product_id: l.product_id, product_name: l.product_name, qty: l.qty, unit_cost: l.unit_cost, line_total: l.line_total })),
+              });
+              setPage('grn');
+            }}
+            onCreateBill={(po, lines) => {
+              setBillPrefill({ po, lines });
+              setPage('bills');
+            }}
+          />
+        );
       case 'bills':
         return (
           <Bills
@@ -154,6 +175,8 @@ export default function App() {
               setGrnPrefill({ bill, lines });
               setPage('grn');
             }}
+            prefillFromPO={billPrefill}
+            onConsumePOPrefill={() => setBillPrefill(null)}
           />
         );
       case 'payments':
