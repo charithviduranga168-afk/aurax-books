@@ -7,6 +7,7 @@ export default function Receipts() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [cashBankAccounts, setCashBankAccounts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -17,7 +18,7 @@ export default function Receipts() {
     customer_id: '',
     invoice_id: '',
     amount: '',
-    payment_method: 'Cash',
+    payment_method: '',
     reference: '',
     notes: '',
   });
@@ -31,7 +32,7 @@ export default function Receipts() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
-    const [recRes, invRes, custRes, settRes] = await Promise.all([
+    const [recRes, invRes, custRes, coaRes, settRes] = await Promise.all([
       supabase
         .from('receipts')
         .select('*')
@@ -48,6 +49,13 @@ export default function Receipts() {
         .eq('user_id', user.id)
         .order('name'),
       supabase
+        .from('chart_of_accounts')
+        .select('id,code,name')
+        .eq('user_id', user.id)
+        .eq('sub_type', 'Cash & Bank')
+        .eq('is_active', true)
+        .order('code'),
+      supabase
         .from('company_settings')
         .select('*')
         .eq('user_id', user.id)
@@ -56,6 +64,7 @@ export default function Receipts() {
     setReceipts(recRes.data || []);
     setInvoices(invRes.data || []);
     setCustomers(custRes.data || []);
+    setCashBankAccounts(coaRes.data || []);
     setCompany(settRes.data || {});
     setLoading(false);
   }
@@ -135,7 +144,7 @@ export default function Receipts() {
       customer_id: '',
       invoice_id: '',
       amount: '',
-      payment_method: 'Cash',
+      payment_method: '',
       reference: '',
       notes: '',
     });
@@ -466,10 +475,12 @@ export default function Receipts() {
                       setForm({ ...form, payment_method: e.target.value })
                     }
                   >
-                    <option>Cash</option>
-                    <option>Bank Transfer</option>
-                    <option>Cheque</option>
-                    <option>Online Payment</option>
+                    <option value="">— Select Account —</option>
+                    {cashBankAccounts.map((a) => (
+                      <option key={a.id} value={`${a.code} - ${a.name}`}>
+                        {a.code} - {a.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
