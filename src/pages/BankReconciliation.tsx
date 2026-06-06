@@ -277,44 +277,149 @@ export default function BankReconciliation() {
     try {
       const ab = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
-      let text = '';
+
+      // Collect all text items with their x,y positions
+      type PdfItem = { str: string; x: number; y: number };
+      const allItems: PdfItem[] = [];
+      let rawText = '';
+
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
+        const vp = page.getViewport({ scale: 1 });
         const tc = await page.getTextContent();
-        text += (tc.items as any[]).map((it) => it.str || '').join(' ') + '\n';
+        rawText += (tc.items as any[]).map((i: any) => i.str || '').join(' ') + '\n';
+        for (const item of tc.items as any[]) {
+          const s = (item.str || '').trim();
+          if (!s) continue;
+          allItems.push({
+            str: s,
+            x: Math.round(item.transform[4]),
+            y: Math.round(vp.height - item.transform[5]),
+          });
+        }
       }
-      setPdfRawText(text);
-      const parsed = extractTxsFromText(text);
+
+      setPdfRawText(rawText);
+
+      // Group items into lines by y-coordinate (3pt tolerance)
+      const lineMap = new Map<number, PdfItem[]>();
+      for (const item of allItems) {
+        let key = item.y;
+        for (const [k] of lineMap) {
+          if (Math.abs(k - item.y) <= 3) { key = k; break; }
+        }
+        if (!lineMap.has(key)) lineMap.set(key, []);
+        lineMap.get(key)!.push(item);
+      }
+      const lines = [...lineMap.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, items]) => items.sort((a, b) => a.x - b.x));
+
+      // Find header row to detect column x-positions
+      let colDebit = -1, colCredit = -1, colBalance = -1;
+      for (const line of lines) {
+        const joined = line.map(i => i.str.toLowerCase()).join(' ');
+        if (/debit|withdrawal|credit|deposit|paid.?in|paid.?out/.test(joined)) {
+          for (const item of line) {
+            const s = item.str.toLowerCase();
+            if (/debit|withdrawal|paid.?out/.test(s) && !/credit/.test(s)) colDebit = item.x;
+            else if (/credit|deposit|paid.?in/.test(s) && !/debit/.test(s)) colCredit = item.x;
+            else if (/balance/.test(s)) colBalance = item.x;
+          }
+          if (colDebit > 0 || colCredit > 0) break;
+        }
+      }
+
+      // Parse data rows
+      const parsed: ParsedTx[] = [];
+      const dateRe = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$|^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+      const amtRe = /^[\d,]+\.\d{2}$/;
+
+      for (const line of lines) {
+        const dateItem = line.find(i => dateRe.test(i.str));
+        if (!dateItem) continue;
+        const dateStr = normalizeDate(dateItem.str);
+        if (!dateStr) continue;
+
+        const amounts: { val: number; x: number; isDr: boolean; isCr: boolean }[] = [];
+        let desc = '';
+
+        for (let j = 0; j < line.length; j++) {
+          const item = line[j];
+          const cleaned = item.str.replace(/,/g, '');
+          if (amtRe.test(cleaned)) {
+            const nextStr = (line[j + 1]?.str || '').toLowerCase().trim();
+            const prevStr = (line[j - 1]?.str || '').toLowerCase().trim();
+            const isDr = /^(dr\.?|debit)$/.test(nextStr) || /^(dr\.?|debit)$/.test(prevStr);
+            const isCr = /^(cr\.?|credit)$/.test(nextStr) || /^(cr\.?|credit)$/.test(prevStr);
+            amounts.push({ val: parseFloat(cleaned), x: item.x, isDr, isCr });
+          } else if (!dateRe.test(item.str) && !/^[-–]$/.test(item.str) && !/^(dr|cr)\.?$/i.test(item.str)) {
+            desc += item.str + ' ';
+          }
+        }
+
+        if (!amounts.length) continue;
+
+        let debit = 0, credit = 0, balance = '';
+
+        const drMarked = amounts.filter(a => a.isDr);
+        const crMarked = amounts.filter(a => a.isCr);
+
+        if (drMarked.length || crMarked.length) {
+          // Explicit Dr/Cr markers found
+          if (drMarked.length) debit = drMarked[0].val;
+          if (crMarked.length) credit = crMarked[0].val;
+          const unmarked = amounts.filter(a => !a.isDr && !a.isCr);
+          if (unmarked.length) balance = String(unmarked[unmarked.length - 1].val);
+        } else if (colDebit >= 0 || colCredit >= 0) {
+          // Use column positions from header
+          for (const { val, x } of amounts) {
+            const dDeb = colDebit >= 0 ? Math.abs(x - colDebit) : Infinity;
+            const dCre = colCredit >= 0 ? Math.abs(x - colCredit) : Infinity;
+            const dBal = colBalance >= 0 ? Math.abs(x - colBalance) : Infinity;
+            const min = Math.min(dDeb, dCre, dBal);
+            if (dBal < Infinity && min === dBal) balance = String(val);
+            else if (dDeb < Infinity && min === dDeb) debit = val;
+            else if (dCre < Infinity && min === dCre) credit = val;
+            else balance = String(val);
+          }
+        } else {
+          // Fallback: sort by x — rightmost is balance, leftmost non-zero is transaction
+          amounts.sort((a, b) => a.x - b.x);
+          if (amounts.length >= 2) {
+            balance = String(amounts[amounts.length - 1].val);
+            const txAmts = amounts.slice(0, -1).filter(a => a.val > 0);
+            if (txAmts.length === 1) {
+              // Use relative x position: left of centre = debit, right = credit
+              const lineSpan = amounts[amounts.length - 1].x - amounts[0].x;
+              const mid = amounts[0].x + lineSpan / 2;
+              if (txAmts[0].x < mid) debit = txAmts[0].val;
+              else credit = txAmts[0].val;
+            } else if (txAmts.length >= 2) {
+              debit = txAmts[0].val; credit = txAmts[1].val;
+            }
+          } else {
+            credit = amounts[0].val;
+          }
+        }
+
+        if (!debit && !credit) continue;
+
+        parsed.push({
+          date: dateStr,
+          description: desc.trim() || 'Transaction',
+          type: credit > 0 && debit === 0 ? 'credit' : 'debit',
+          amount: credit > 0 && debit === 0 ? credit : debit,
+          balance,
+          reference: '',
+        });
+      }
+
       if (parsed.length) setParsedTxs(parsed);
       else setParseError('Could not auto-parse transactions. Review the extracted text below, then enter manually.');
     } catch (e: any) {
       setParseError('Failed to read PDF: ' + e.message);
     }
-  }
-
-  function extractTxsFromText(text: string): ParsedTx[] {
-    const parsed: ParsedTx[] = [];
-    const dateRe = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2})/g;
-    const amtRe = /\b([\d,]+\.\d{2})\b/g;
-    const lines = text.split(/\n|\r/).map(l => l.trim()).filter(l => l.length > 8);
-    for (const line of lines) {
-      const dateMatches = [...line.matchAll(dateRe)];
-      if (!dateMatches.length) continue;
-      const amts = [...line.matchAll(amtRe)].map(m => parseFloat(m[1].replace(/,/g, '')));
-      if (!amts.length) continue;
-      const dateStr = normalizeDate(dateMatches[0][1]);
-      if (!dateStr) continue;
-      const afterDate = line.slice(dateMatches[0].index! + dateMatches[0][0].length);
-      const firstAmtIdx = afterDate.search(/[\d,]+\.\d{2}/);
-      const desc = (firstAmtIdx > 0 ? afterDate.slice(0, firstAmtIdx) : afterDate).replace(/\s+/g, ' ').trim();
-      let credit = 0, debit = 0, balance = '';
-      if (amts.length >= 3) { debit = amts[0]; credit = amts[1]; balance = String(amts[2]); }
-      else if (amts.length === 2) { credit = amts[0]; balance = String(amts[1]); }
-      else { credit = amts[0]; }
-      if (!credit && !debit) continue;
-      parsed.push({ date: dateStr, description: desc || 'Transaction', type: credit > 0 ? 'credit' : 'debit', amount: credit > 0 ? credit : debit, balance, reference: '' });
-    }
-    return parsed;
   }
 
   async function importTransactions() {
@@ -664,9 +769,39 @@ export default function BankReconciliation() {
                 <select value={selectedAccount} onChange={(e) => setSelectedAccount(e.target.value)} style={{ height: 38, padding: '0 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text1)', fontSize: 14, fontWeight: 600 }}>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                {selectedBankTx && selectedBookEntry && <button className="btn btn-primary" onClick={reconcile}>Match Selected</button>}
-                {(selectedBankTx || selectedBookEntry) && <button className="btn btn-secondary" onClick={() => { setSelectedBankTx(null); setSelectedBookEntry(null); }}>Clear</button>}
+                {(selectedBankTx || selectedBookEntry) && <button className="btn btn-secondary" onClick={() => { setSelectedBankTx(null); setSelectedBookEntry(null); }}>Clear Selection</button>}
               </div>
+
+              {/* Difference banner */}
+              {selectedBankTx && selectedBookEntry && (() => {
+                const bankTx = unreconciledTxs.find(t => t.id === selectedBankTx);
+                const bookE = activeBookEntries.find(e => e.id === selectedBookEntry);
+                const bankAmt = bankTx ? (bankTx.credit || bankTx.debit) : 0;
+                const bookAmt = bookE ? bookE.amount : 0;
+                const diff = Math.abs(bankAmt - bookAmt);
+                const match = diff < 0.01;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '12px 20px', borderRadius: 10, marginBottom: 16, background: match ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.07)', border: `1.5px solid ${match ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.2)'}` }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2, textTransform: 'uppercase' }}>Bank</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{fmt(bankAmt)}</div>
+                    </div>
+                    <div style={{ fontSize: 18, color: 'var(--text3)' }}>↔</div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2, textTransform: 'uppercase' }}>Book</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{fmt(bookAmt)}</div>
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                      {match ? (
+                        <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 14 }}>✓ Amounts match</span>
+                      ) : (
+                        <span style={{ fontWeight: 700, color: '#dc2626', fontSize: 14 }}>Difference: {fmt(diff)}</span>
+                      )}
+                    </div>
+                    <button className="btn btn-primary" onClick={reconcile} style={{ flexShrink: 0 }}>Confirm Match</button>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 {/* Bank Transactions */}
