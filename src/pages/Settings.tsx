@@ -17,6 +17,7 @@ export default function Settings() {
     receipt_prefix: 'REC-',
     payment_prefix: 'PAY-',
     grn_prefix: 'GRN-',
+    costing_method: 'FIFO',
   });
   const [settingsId, setSettingsId] = useState<string | null>(null);
 
@@ -48,6 +49,7 @@ export default function Settings() {
         receipt_prefix: data.receipt_prefix || 'REC-',
         payment_prefix: data.payment_prefix || 'PAY-',
         grn_prefix: data.grn_prefix || 'GRN-',
+        costing_method: data.costing_method || 'FIFO',
       });
     }
     setLoading(false);
@@ -73,6 +75,7 @@ export default function Settings() {
       receipt_prefix: form.receipt_prefix,
       payment_prefix: form.payment_prefix,
       grn_prefix: form.grn_prefix,
+      costing_method: form.costing_method,
     };
 
     if (settingsId) {
@@ -264,6 +267,55 @@ export default function Settings() {
                 }
                 placeholder="GRN-"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Inventory Costing */}
+        <div className="card">
+          <div
+            style={{
+              fontSize: '13px',
+              fontWeight: 700,
+              color: 'var(--brand)',
+              marginBottom: '16px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Inventory Costing
+          </div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Costing Method</label>
+              <select
+                value={form.costing_method}
+                onChange={(e) =>
+                  setForm({ ...form, costing_method: e.target.value })
+                }
+              >
+                <option value="FIFO">FIFO (First In, First Out) — Standard</option>
+                <option value="LIFO">LIFO (Last In, First Out)</option>
+                <option value="AVG">Average Cost</option>
+              </select>
+            </div>
+            <div className="form-group full">
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--text3)',
+                  lineHeight: 1.6,
+                }}
+              >
+                This determines how Aurax Books values your stock and computes each
+                product's Cost Price. It feeds directly into BOM costs, production
+                order costs, and the Cost Price shown on every product. Today, costs
+                are computed using a running Weighted Average (the basis for AVG, and
+                the working approximation used for FIFO/LIFO until full purchase-layer
+                tracking is enabled). The Cost Price on the Products page updates
+                automatically — every Goods Received Note and completed Production
+                Order recalculates it for you.
+              </span>
             </div>
           </div>
         </div>

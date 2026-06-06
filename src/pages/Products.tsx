@@ -249,6 +249,17 @@ export default function Products() {
                     setForm({ ...form, cost_price: e.target.value })
                   }
                 />
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text3)',
+                    marginTop: '3px',
+                  }}
+                >
+                  Starting cost for new stock. Once goods are received via GRN or
+                  produced via Manufacturing, this is recalculated automatically
+                  using your costing method (Settings → Inventory Costing).
+                </span>
               </div>
               <div className="form-group">
                 <label>Opening Stock Qty</label>

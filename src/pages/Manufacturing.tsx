@@ -181,8 +181,14 @@ export default function Manufacturing() {
 
   const bomFormCost = bomLines.reduce((sum, l) => sum + lineCost(l), 0);
 
+  // Uses each component's live Cost Price (kept current by the costing engine)
+  // so BOM cost reflects today's stock valuation, falling back to the stored
+  // line cost for components whose product record can't be resolved
   function bomTotalCost(b: Bom) {
-    return (b.bom_lines || []).reduce((sum, l) => sum + l.qty_required * (l.cost_price || 0), 0);
+    return (b.bom_lines || []).reduce(
+      (sum, l) => sum + l.qty_required * (l.component?.cost_price ?? l.cost_price ?? 0),
+      0
+    );
   }
 
   async function handleSaveBom() {
@@ -301,7 +307,10 @@ export default function Manufacturing() {
     const qty = parseFloat(orderForm.qty_to_produce) || 0;
     const batches = bom ? qty / (bom.output_qty || 1) : 0;
     const totalCost = bom
-      ? (bom.bom_lines || []).reduce((sum, l) => sum + l.qty_required * batches * (l.cost_price || 0), 0)
+      ? (bom.bom_lines || []).reduce(
+          (sum, l) => sum + l.qty_required * batches * (l.component?.cost_price ?? l.cost_price ?? 0),
+          0
+        )
       : 0;
 
     await supabase.from('production_orders').insert({
@@ -331,22 +340,32 @@ export default function Manufacturing() {
         `Complete order ${order.po_number}? This will deduct raw materials and add finished goods to stock.`,
         async () => {
           const batches = order.qty_to_produce / (bom.output_qty || 1);
+          let consumedCost = 0;
 
           for (const line of bom.bom_lines || []) {
             const product = products.find((p) => p.id === line.component_id);
             if (!product) continue;
             const used = line.qty_required * batches;
+            consumedCost += used * (product.cost_price || 0);
             await supabase
               .from('products')
               .update({ stock_qty: (product.stock_qty || 0) - used })
               .eq('id', product.id);
           }
 
+          // Cost Price of the finished good is rolled forward as a weighted average,
+          // using the actual cost of the components consumed to make this batch
           const finishedProduct = products.find((p) => p.id === bom.finished_product_id);
           if (finishedProduct) {
+            const oldQty = finishedProduct.stock_qty || 0;
+            const oldCost = finishedProduct.cost_price || 0;
+            const producedQty = order.qty_to_produce;
+            const batchUnitCost = producedQty > 0 ? consumedCost / producedQty : 0;
+            const newQty = oldQty + producedQty;
+            const newCost = newQty > 0 ? (oldQty * oldCost + producedQty * batchUnitCost) / newQty : oldCost;
             await supabase
               .from('products')
-              .update({ stock_qty: (finishedProduct.stock_qty || 0) + order.qty_to_produce })
+              .update({ stock_qty: newQty, cost_price: newCost })
               .eq('id', finishedProduct.id);
           }
 

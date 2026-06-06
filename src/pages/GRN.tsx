@@ -256,9 +256,15 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
           }
           const product = products.find((p) => p.id === l.product_id);
           if (product) {
+            // Recompute Cost Price as a running weighted average across the new receipt
+            const oldQty = product.stock_qty || 0;
+            const oldCost = product.cost_price || 0;
+            const recvQty = l.received_qty || 0;
+            const newQty = oldQty + recvQty;
+            const newCost = newQty > 0 ? (oldQty * oldCost + recvQty * (l.unit_cost || 0)) / newQty : oldCost;
             await supabase
               .from('products')
-              .update({ stock_qty: (product.stock_qty || 0) + (l.received_qty || 0) })
+              .update({ stock_qty: newQty, cost_price: newCost })
               .eq('id', product.id);
           }
         }
