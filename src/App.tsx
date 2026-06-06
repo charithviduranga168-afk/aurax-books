@@ -21,6 +21,7 @@ import ChartOfAccounts from './pages/ChartOfAccounts';
 import PurchaseOrders from './pages/PurchaseOrders';
 import SalesOrders from './pages/SalesOrders';
 import Subscription from './pages/Subscription';
+import PointOfSale from './pages/PointOfSale';
 import './App.css';
 
 export type Page =
@@ -43,7 +44,8 @@ export type Page =
   | 'settings'
   | 'categories'
   | 'coa'
-  | 'subscription';
+  | 'subscription'
+  | 'pos';
 
 const menuGroups = [
   {
@@ -88,6 +90,10 @@ const menuGroups = [
   {
     label: 'Manufacturing',
     items: [{ page: 'manufacturing', label: 'BOM & Production' }],
+  },
+  {
+    label: 'Point of Sale',
+    items: [{ page: 'pos', label: 'Point of Sale' }],
   },
 ];
 
@@ -138,7 +144,7 @@ export default function App() {
   const currentGroup = menuGroups.find((g) =>
     g.items.some((i) => i.page === page)
   );
-  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings' };
+  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale' };
   const currentLabel =
     currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
 
@@ -225,6 +231,8 @@ export default function App() {
         return <Settings />;
       case 'coa':
         return <ChartOfAccounts />;
+      case 'pos':
+        return <PointOfSale />;
       case 'subscription':
         return <Subscription />;
       default:
