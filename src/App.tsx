@@ -88,6 +88,7 @@ export default function App() {
   const [openGroups, setOpenGroups] = useState<string[]>(
     menuGroups.map((g) => g.label)
   );
+  const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -142,13 +143,26 @@ export default function App() {
       case 'receipts':
         return <Receipts />;
       case 'bills':
-        return <Bills />;
+        return (
+          <Bills
+            onCreateGrn={(bill, lines) => {
+              setGrnPrefill({ bill, lines });
+              setPage('grn');
+            }}
+          />
+        );
       case 'payments':
         return <Payments />;
       case 'expenses':
         return <Expenses />;
       case 'grn':
-        return <GRN />;
+        return (
+          <GRN
+            nav={nav}
+            prefill={grnPrefill}
+            onConsumePrefill={() => setGrnPrefill(null)}
+          />
+        );
       case 'journal':
         return <JournalEntries />;
       case 'reports':

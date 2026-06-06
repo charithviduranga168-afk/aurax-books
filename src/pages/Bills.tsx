@@ -11,7 +11,11 @@ interface LineItem {
   line_total: number;
 }
 
-export default function Bills() {
+interface Props {
+  onCreateGrn?: (bill: any, lines: any[]) => void;
+}
+
+export default function Bills({ onCreateGrn }: Props = {}) {
   const [bills, setBills] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -21,6 +25,7 @@ export default function Bills() {
   const [showView, setShowView] = useState(false);
   const [viewBill, setViewBill] = useState<any>(null);
   const [viewLines, setViewLines] = useState<any[]>([]);
+  const [viewGrns, setViewGrns] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [saving, setSaving] = useState(false);
@@ -115,12 +120,58 @@ export default function Bills() {
 
   async function openView(bill: any) {
     setViewBill(bill);
-    const { data } = await supabase
-      .from('bill_lines')
-      .select('*')
-      .eq('bill_id', bill.id);
-    setViewLines(data || []);
+    const [{ data: lineData }, { data: grnData }] = await Promise.all([
+      supabase.from('bill_lines').select('*').eq('bill_id', bill.id),
+      supabase.from('grn_headers').select('*').eq('bill_id', bill.id),
+    ]);
+    setViewLines(lineData || []);
+    setViewGrns(grnData || []);
     setShowView(true);
+  }
+
+  // Bill → GRN → Stock document flow trail
+  function flowBar(bill: any, grn: any) {
+    const stockDone = grn?.status === 'Received' || grn?.status === 'Partial';
+    const chip = (label: string, tone: 'done' | 'pending') => (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 14px',
+          borderRadius: '20px',
+          fontSize: '12px',
+          fontWeight: 600,
+          background: tone === 'done' ? 'var(--green-bg)' : 'var(--bg3)',
+          color: tone === 'done' ? '#12b76a' : 'var(--text3)',
+          border: `1px solid ${tone === 'done' ? 'var(--green)' : 'var(--border)'}`,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </span>
+    );
+    const arrow = <span style={{ color: 'var(--text3)' }}>→</span>;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+          padding: '14px 18px',
+          background: 'var(--bg3)',
+          borderRadius: '10px',
+          marginBottom: '20px',
+        }}
+      >
+        {chip(`Bill (${bill.bill_number})`, 'done')}
+        {arrow}
+        {chip(grn ? `GRN (${grn.grn_number})` : 'GRN — pending', grn ? 'done' : 'pending')}
+        {arrow}
+        {chip(stockDone ? 'Stock Updated ✅' : 'Stock — pending', stockDone ? 'done' : 'pending')}
+      </div>
+    );
   }
 
   async function handleSave() {
@@ -691,6 +742,20 @@ export default function Bills() {
                       >
                         PDF
                       </button>
+                      {b.status !== 'Received' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={async () => {
+                            const { data } = await supabase
+                              .from('bill_lines')
+                              .select('*')
+                              .eq('bill_id', b.id);
+                            onCreateGrn?.(b, data || []);
+                          }}
+                        >
+                          Create GRN
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -729,6 +794,7 @@ export default function Bills() {
               </div>
             </div>
             <div className="modal-body">
+              {flowBar(viewBill, viewGrns[0])}
               <div
                 style={{
                   display: 'grid',
