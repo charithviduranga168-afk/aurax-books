@@ -8,7 +8,7 @@ interface Product {
   sales_price: number;
   cost_price: number;
   stock_qty: number;
-  category_id?: string;
+  category?: string;
 }
 
 interface Category {
@@ -92,7 +92,7 @@ export default function PointOfSale({ nav }: Props) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const [p, c, cu, se, sa] = await Promise.all([
-      supabase.from('products').select('id,name,sales_price,cost_price,stock_qty,category_id').eq('user_id', user.id).order('name'),
+      supabase.from('products').select('id,name,sales_price,cost_price,stock_qty,category').eq('user_id', user.id).order('name'),
       supabase.from('categories').select('id,name').eq('user_id', user.id).order('name'),
       supabase.from('customers').select('id,name').eq('user_id', user.id).order('name'),
       supabase.from('company_settings').select('*').eq('user_id', user.id).single(),
@@ -269,7 +269,7 @@ export default function PointOfSale({ nav }: Props) {
 
   const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
   const filteredProducts = products.filter((p) => {
-    const matchCat = catFilter === 'all' || p.category_id === catFilter;
+    const matchCat = catFilter === 'all' || p.category === catFilter;
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
@@ -471,11 +471,14 @@ export default function PointOfSale({ nav }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Category tabs */}
           <div style={{ display: 'flex', gap: 6, padding: '10px 14px', background: '#fff', borderBottom: '1px solid #e5e7eb', overflowX: 'auto', flexShrink: 0 }}>
-            {[{ id: 'all', name: 'All Products' }, ...categories].map((cat) => (
-              <button key={cat.id} onClick={() => setCatFilter(cat.id)} style={{ whiteSpace: 'nowrap', padding: '6px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: catFilter === cat.id ? 'var(--brand)' : '#f3f4f6', color: catFilter === cat.id ? '#fff' : '#374151', transition: 'all 0.15s' }}>
-                {cat.name}
-              </button>
-            ))}
+            {[{ id: 'all', name: 'All Products' }, ...categories].map((cat) => {
+              const val = cat.id === 'all' ? 'all' : cat.name;
+              return (
+                <button key={cat.id} onClick={() => setCatFilter(val)} style={{ whiteSpace: 'nowrap', padding: '6px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: catFilter === val ? 'var(--brand)' : '#f3f4f6', color: catFilter === val ? '#fff' : '#374151', transition: 'all 0.15s' }}>
+                  {cat.name}
+                </button>
+              );
+            })}
           </div>
 
           {/* Product grid */}
