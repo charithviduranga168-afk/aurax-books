@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import md5 from 'md5';
 
 const BASE_PRICE = 2000;
 const PER_USER_PRICE = 1000;
-const AURAX_PAYHERE_MERCHANT = '1228327'; // Aurax Books PayHere merchant ID
+const AURAX_PAYHERE_MERCHANT = import.meta.env.VITE_PAYHERE_MERCHANT_ID as string;
+const AURAX_PAYHERE_SECRET = import.meta.env.VITE_PAYHERE_SECRET as string;
 
 interface Member {
   id: string;
@@ -112,6 +114,7 @@ export default function Subscription() {
   function payViaPayHere() {
     const orderId = `AURAX-SUB-${user.id.slice(0, 8)}-${Date.now()}`;
     const amount = monthlyTotal.toFixed(2);
+    const currency = 'LKR';
 
     // Record pending payment
     supabase.from('subscription_payments').insert({
@@ -124,10 +127,13 @@ export default function Subscription() {
       status: 'Pending',
     });
 
-    // Build form and submit to PayHere
+    // PayHere hash: MD5(merchant_id + order_id + amount + currency + MD5(secret).toUpperCase()).toUpperCase()
+    const secretHash = md5(AURAX_PAYHERE_SECRET).toUpperCase();
+    const hash = md5(AURAX_PAYHERE_MERCHANT + orderId + amount + currency + secretHash).toUpperCase();
+
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = 'https://sandbox.payhere.lk/pay/checkout';
+    form.action = 'https://www.payhere.lk/pay/checkout';
     form.target = '_blank';
 
     const fields: Record<string, string> = {
@@ -137,7 +143,7 @@ export default function Subscription() {
       notify_url: 'https://pvxubbkbyvruceoofpkt.supabase.co/functions/v1/payhere-notify',
       order_id: orderId,
       items: `Aurax Books Subscription — ${currentPeriod} (${totalUsers} user${totalUsers > 1 ? 's' : ''})`,
-      currency: 'LKR',
+      currency,
       amount,
       first_name: (user.email || '').split('@')[0],
       last_name: '',
@@ -146,6 +152,7 @@ export default function Subscription() {
       address: 'Sri Lanka',
       city: 'Colombo',
       country: 'Sri Lanka',
+      hash,
     };
 
     for (const [k, v] of Object.entries(fields)) {
