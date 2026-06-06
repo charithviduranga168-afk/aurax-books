@@ -19,6 +19,7 @@ import Categories from './pages/Categories';
 import Settings from './pages/Settings';
 import ChartOfAccounts from './pages/ChartOfAccounts';
 import PurchaseOrders from './pages/PurchaseOrders';
+import SalesOrders from './pages/SalesOrders';
 import './App.css';
 
 export type Page =
@@ -28,6 +29,7 @@ export type Page =
   | 'products'
   | 'invoices'
   | 'receipts'
+  | 'salesorders'
   | 'purchaseorders'
   | 'bills'
   | 'payments'
@@ -46,6 +48,7 @@ const menuGroups = [
     label: 'Sales',
     items: [
       { page: 'customers', label: 'Customers' },
+      { page: 'salesorders', label: 'Sales Orders' },
       { page: 'invoices', label: 'Invoices' },
       { page: 'receipts', label: 'Receipts' },
     ],
@@ -96,6 +99,7 @@ export default function App() {
   );
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
+  const [invoicePrefill, setInvoicePrefill] = useState<{ so: any; lines: any[] } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -147,8 +151,23 @@ export default function App() {
         return <Products />;
       case 'inventory':
         return <Inventory />;
+      case 'salesorders':
+        return (
+          <SalesOrders
+            nav={nav}
+            onCreateInvoice={(so, lines) => {
+              setInvoicePrefill({ so, lines });
+              setPage('invoices');
+            }}
+          />
+        );
       case 'invoices':
-        return <Invoices />;
+        return (
+          <Invoices
+            prefillFromSO={invoicePrefill}
+            onConsumeSoPrefill={() => setInvoicePrefill(null)}
+          />
+        );
       case 'receipts':
         return <Receipts />;
       case 'purchaseorders':

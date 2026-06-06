@@ -31,7 +31,12 @@ interface LineItem {
   cogs: number;
 }
 
-export default function Invoices() {
+interface Props {
+  prefillFromSO?: { so: any; lines: any[] } | null;
+  onConsumeSoPrefill?: () => void;
+}
+
+export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -44,6 +49,7 @@ export default function Invoices() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [saving, setSaving] = useState(false);
+  const [activeSoId, setActiveSoId] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -70,6 +76,25 @@ export default function Invoices() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!prefillFromSO) return;
+    const { so, lines: soLines } = prefillFromSO;
+    setForm(f => ({ ...f, customer_id: so.customer_id || '', notes: `Ref: ${so.so_number}` }));
+    setLines((soLines || []).map((l: any) => ({
+      product_id: l.product_id,
+      product_name: l.product_name,
+      qty: l.qty,
+      unit_price: l.unit_price,
+      discount_pct: l.discount_pct || 0,
+      line_total: l.line_total,
+      cost_price: 0,
+      cogs: 0,
+    })));
+    setActiveSoId(so.id);
+    setShowForm(true);
+    onConsumeSoPrefill?.();
+  }, [prefillFromSO]);
 
   async function loadData() {
     const {
@@ -272,6 +297,12 @@ export default function Invoices() {
           .from('customers')
           .update({ balance: (customer.balance || 0) + total })
           .eq('id', form.customer_id);
+      }
+      if (activeSoId) {
+        await supabase.from('sales_orders')
+          .update({ status: 'Invoiced', invoice_id: invData.id })
+          .eq('id', activeSoId);
+        setActiveSoId(null);
       }
     }
 
