@@ -22,6 +22,8 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import SalesOrders from './pages/SalesOrders';
 import Subscription from './pages/Subscription';
 import PointOfSale from './pages/PointOfSale';
+import StockAdjustments from './pages/StockAdjustments';
+import BankReconciliation from './pages/BankReconciliation';
 import './App.css';
 
 export type Page =
@@ -45,7 +47,9 @@ export type Page =
   | 'categories'
   | 'coa'
   | 'subscription'
-  | 'pos';
+  | 'pos'
+  | 'stockadjustments'
+  | 'bankreconciliation';
 
 const menuGroups = [
   {
@@ -73,6 +77,7 @@ const menuGroups = [
       { page: 'products', label: 'Products' },
       { page: 'categories', label: 'Categories' },
       { page: 'inventory', label: 'Stock & Movements' },
+      { page: 'stockadjustments', label: 'Stock Adjustments' },
     ],
   },
   {
@@ -81,6 +86,7 @@ const menuGroups = [
       { page: 'coa', label: 'Chart of Accounts' },
       { page: 'expenses', label: 'Expenses' },
       { page: 'journal', label: 'Journal Entries' },
+      { page: 'bankreconciliation', label: 'Bank Reconciliation' },
     ],
   },
   {
@@ -233,6 +239,10 @@ export default function App() {
         return <ChartOfAccounts />;
       case 'pos':
         return <PointOfSale nav={nav} />;
+      case 'stockadjustments':
+        return <StockAdjustments />;
+      case 'bankreconciliation':
+        return <BankReconciliation />;
       case 'subscription':
         return <Subscription />;
       default:
