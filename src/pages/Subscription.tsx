@@ -168,21 +168,6 @@ export default function Subscription() {
     form.submit();
   }
 
-  function payViaPayPal() {
-    const orderId = `AURAX-SUB-${user.id.slice(0, 8)}-${Date.now()}`;
-    supabase.from('subscription_payments').insert({
-      user_id: user.id,
-      amount: monthlyTotal,
-      users_count: totalUsers,
-      period: currentPeriod,
-      payment_method: 'PayPal',
-      payment_ref: orderId,
-      status: 'Pending',
-    });
-    // Navigate to PayPal.me (amount in USD — Rs. 360 ≈ $1)
-    const usd = (monthlyTotal / 360).toFixed(2);
-    window.location.href = `https://paypal.me/auraxbooks/${usd}`;
-  }
 
   const tabStyle = (i: number) => ({
     padding: '8px 16px',
@@ -318,18 +303,7 @@ export default function Subscription() {
                   style={{ display: 'block', borderRadius: '6px' }}
                 />
               </button>
-              <button
-                className="btn btn-secondary"
-                onClick={payViaPayPal}
-                style={{ minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <span style={{ fontSize: '16px' }}>🅿️</span>
-                Pay via PayPal
-              </button>
             </div>
-            <p style={{ fontSize: '11px', color: 'var(--text3)', margin: '12px 0 0' }}>
-              PayHere opens a secure hosted checkout. PayPal converts at approx. Rs. 360/$1.
-            </p>
           </div>
         </div>
       )}
