@@ -307,12 +307,16 @@ export default function Subscription() {
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button
-                className="btn btn-primary"
                 onClick={payViaPayHere}
-                style={{ minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
+                title="Pay via PayHere"
               >
-                <span style={{ fontSize: '16px' }}>💳</span>
-                Pay via PayHere
+                <img
+                  src="https://www.payhere.lk/downloads/images/payhere_short_banner.png"
+                  alt="PayHere"
+                  width="250"
+                  style={{ display: 'block', borderRadius: '6px' }}
+                />
               </button>
               <button
                 className="btn btn-secondary"
