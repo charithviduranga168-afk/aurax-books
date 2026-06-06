@@ -32,33 +32,33 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 const DEFAULT_ACCOUNTS = [
-  { code: '1000', name: 'Cash on Hand',        type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Physical cash held by the business' },
-  { code: '1100', name: 'Bank Account',         type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Main business bank account' },
-  { code: '1200', name: 'Petty Cash',           type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Small cash fund for minor expenses' },
-  { code: '1300', name: 'Accounts Receivable',  type: 'Asset',     sub_type: 'Accounts Receivable', description: 'Money owed by customers' },
-  { code: '1400', name: 'Inventory',            type: 'Asset',     sub_type: 'Inventory',           description: 'Stock of goods for sale' },
-  { code: '1500', name: 'Prepaid Expenses',     type: 'Asset',     sub_type: 'Other Asset',         description: 'Expenses paid in advance' },
-  { code: '1600', name: 'Equipment',            type: 'Asset',     sub_type: 'Fixed Asset',         description: 'Business equipment and machinery' },
-  { code: '1700', name: 'Vehicles',             type: 'Asset',     sub_type: 'Fixed Asset',         description: 'Business vehicles' },
-  { code: '2000', name: 'Accounts Payable',     type: 'Liability', sub_type: 'Accounts Payable',    description: 'Money owed to suppliers' },
-  { code: '2100', name: 'Tax Payable',          type: 'Liability', sub_type: 'Tax Payable',         description: 'Taxes owed to government' },
-  { code: '2200', name: 'Salary Payable',       type: 'Liability', sub_type: 'Other Liability',     description: 'Salaries owed to employees' },
-  { code: '2300', name: 'Bank Loan',            type: 'Liability', sub_type: 'Loan',                description: 'Long-term bank loan' },
-  { code: '3000', name: 'Owner Capital',        type: 'Equity',    sub_type: 'Capital',             description: 'Capital invested by the owner' },
-  { code: '3100', name: 'Retained Earnings',    type: 'Equity',    sub_type: 'Retained Earnings',   description: 'Accumulated profits retained in business' },
-  { code: '3200', name: 'Drawings',             type: 'Equity',    sub_type: 'Owner Equity',        description: 'Owner withdrawals from the business' },
-  { code: '4000', name: 'Sales Revenue',        type: 'Income',    sub_type: 'Sales Revenue',       description: 'Revenue from product sales' },
-  { code: '4100', name: 'Service Revenue',      type: 'Income',    sub_type: 'Service Revenue',     description: 'Revenue from services provided' },
-  { code: '4200', name: 'Other Income',         type: 'Income',    sub_type: 'Other Income',        description: 'Miscellaneous income' },
-  { code: '5000', name: 'Cost of Goods Sold',   type: 'Expense',   sub_type: 'Cost of Goods Sold',  description: 'Direct cost of products sold' },
-  { code: '5100', name: 'Salaries & Wages',     type: 'Expense',   sub_type: 'Payroll',             description: 'Employee salaries and wages' },
-  { code: '5200', name: 'Rent Expense',         type: 'Expense',   sub_type: 'Operating Expense',   description: 'Office or warehouse rent' },
-  { code: '5300', name: 'Utilities',            type: 'Expense',   sub_type: 'Operating Expense',   description: 'Electricity, water, internet' },
-  { code: '5400', name: 'Marketing & Advertising', type: 'Expense', sub_type: 'Operating Expense',  description: 'Marketing and advertising costs' },
-  { code: '5500', name: 'Transportation',       type: 'Expense',   sub_type: 'Operating Expense',   description: 'Delivery and transport costs' },
-  { code: '5600', name: 'Tax Expense',          type: 'Expense',   sub_type: 'Tax Expense',         description: 'Income and other taxes' },
-  { code: '5700', name: 'Depreciation',         type: 'Expense',   sub_type: 'Operating Expense',   description: 'Depreciation of fixed assets' },
-  { code: '5800', name: 'Miscellaneous Expense',type: 'Expense',   sub_type: 'Other Expense',       description: 'Other general expenses' },
+  { code: '1000', name: 'Cash on Hand',           type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Physical cash held by the business' },
+  { code: '1100', name: 'Bank Account',            type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Main business bank account' },
+  { code: '1200', name: 'Petty Cash',              type: 'Asset',     sub_type: 'Cash & Bank',         description: 'Small cash fund for minor expenses' },
+  { code: '1300', name: 'Accounts Receivable',     type: 'Asset',     sub_type: 'Accounts Receivable', description: 'Money owed by customers' },
+  { code: '1400', name: 'Inventory',               type: 'Asset',     sub_type: 'Inventory',           description: 'Stock of goods for sale' },
+  { code: '1500', name: 'Prepaid Expenses',        type: 'Asset',     sub_type: 'Other Asset',         description: 'Expenses paid in advance' },
+  { code: '1600', name: 'Equipment',               type: 'Asset',     sub_type: 'Fixed Asset',         description: 'Business equipment and machinery' },
+  { code: '1700', name: 'Vehicles',                type: 'Asset',     sub_type: 'Fixed Asset',         description: 'Business vehicles' },
+  { code: '2000', name: 'Accounts Payable',        type: 'Liability', sub_type: 'Accounts Payable',    description: 'Money owed to suppliers' },
+  { code: '2100', name: 'Tax Payable',             type: 'Liability', sub_type: 'Tax Payable',         description: 'Taxes owed to government' },
+  { code: '2200', name: 'Salary Payable',          type: 'Liability', sub_type: 'Other Liability',     description: 'Salaries owed to employees' },
+  { code: '2300', name: 'Bank Loan',               type: 'Liability', sub_type: 'Loan',                description: 'Long-term bank loan' },
+  { code: '3000', name: 'Owner Capital',           type: 'Equity',    sub_type: 'Capital',             description: 'Capital invested by the owner' },
+  { code: '3100', name: 'Retained Earnings',       type: 'Equity',    sub_type: 'Retained Earnings',   description: 'Accumulated profits retained in business' },
+  { code: '3200', name: 'Drawings',                type: 'Equity',    sub_type: 'Owner Equity',        description: 'Owner withdrawals from the business' },
+  { code: '4000', name: 'Sales Revenue',           type: 'Income',    sub_type: 'Sales Revenue',       description: 'Revenue from product sales' },
+  { code: '4100', name: 'Service Revenue',         type: 'Income',    sub_type: 'Service Revenue',     description: 'Revenue from services provided' },
+  { code: '4200', name: 'Other Income',            type: 'Income',    sub_type: 'Other Income',        description: 'Miscellaneous income' },
+  { code: '5000', name: 'Cost of Goods Sold',      type: 'Expense',   sub_type: 'Cost of Goods Sold',  description: 'Direct cost of products sold' },
+  { code: '5100', name: 'Salaries & Wages',        type: 'Expense',   sub_type: 'Payroll',             description: 'Employee salaries and wages' },
+  { code: '5200', name: 'Rent Expense',            type: 'Expense',   sub_type: 'Operating Expense',   description: 'Office or warehouse rent' },
+  { code: '5300', name: 'Utilities',               type: 'Expense',   sub_type: 'Operating Expense',   description: 'Electricity, water, internet' },
+  { code: '5400', name: 'Marketing & Advertising', type: 'Expense',   sub_type: 'Operating Expense',   description: 'Marketing and advertising costs' },
+  { code: '5500', name: 'Transportation',          type: 'Expense',   sub_type: 'Operating Expense',   description: 'Delivery and transport costs' },
+  { code: '5600', name: 'Tax Expense',             type: 'Expense',   sub_type: 'Tax Expense',         description: 'Income and other taxes' },
+  { code: '5700', name: 'Depreciation',            type: 'Expense',   sub_type: 'Operating Expense',   description: 'Depreciation of fixed assets' },
+  { code: '5800', name: 'Miscellaneous Expense',   type: 'Expense',   sub_type: 'Other Expense',       description: 'Other general expenses' },
 ]
 
 export default function ChartOfAccounts() {
@@ -92,8 +92,14 @@ export default function ChartOfAccounts() {
     setSeeding(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const rows = DEFAULT_ACCOUNTS.map(a => ({ ...a, user_id: user.id, is_system: true, is_active: true }))
-    await supabase.from('chart_of_accounts').upsert(rows, { onConflict: 'user_id,code' })
+    for (const a of DEFAULT_ACCOUNTS) {
+      await supabase.from('chart_of_accounts').insert({
+        ...a,
+        user_id: user.id,
+        is_system: true,
+        is_active: true,
+      })
+    }
     await loadAccounts()
     setSeeding(false)
   }
@@ -106,7 +112,10 @@ export default function ChartOfAccounts() {
 
   function openEdit(acc: Account) {
     setEditAccount(acc)
-    setForm({ code: acc.code, name: acc.name, type: acc.type, sub_type: acc.sub_type, description: acc.description || '', is_active: acc.is_active })
+    setForm({
+      code: acc.code, name: acc.name, type: acc.type,
+      sub_type: acc.sub_type, description: acc.description || '', is_active: acc.is_active
+    })
     setShowModal(true)
   }
 
@@ -114,7 +123,6 @@ export default function ChartOfAccounts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     if (!form.code || !form.name) return alert('Code and Name are required')
-
     if (editAccount) {
       await supabase.from('chart_of_accounts').update({
         code: form.code, name: form.name, type: form.type,
@@ -149,7 +157,6 @@ export default function ChartOfAccounts() {
     return matchType && matchSearch
   })
 
-  // Group by type
   const grouped = ACCOUNT_TYPES.reduce((acc, type) => {
     const items = filtered.filter(a => a.type === type)
     if (items.length > 0) acc[type] = items
@@ -343,8 +350,6 @@ export default function ChartOfAccounts() {
                   Active account
                 </label>
               </div>
-
-              {/* Payment method hint */}
               {form.sub_type === 'Cash & Bank' && (
                 <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand)' }}>
                   💡 Cash & Bank accounts will be available as payment methods in Invoices, Receipts, Bills and Payments.
