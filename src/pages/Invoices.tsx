@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import md5 from 'md5';
 
 interface Invoice {
   id: string;
@@ -546,6 +547,56 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     exportPDF(inv, lines || []);
   }
 
+  function generatePaymentLink(inv: Invoice) {
+    const merchantId = companySettings.payhere_merchant_id;
+    const merchantSecret = companySettings.payhere_secret;
+    if (!merchantId) return;
+
+    const amount = (inv.balance || inv.total).toFixed(2);
+    const currency = 'LKR';
+    const orderId = inv.invoice_number;
+
+    // PayHere hash: MD5(merchant_id + order_id + amount + currency + MD5(merchant_secret).toUpperCase()).toUpperCase()
+    const secretHash = md5(merchantSecret).toUpperCase();
+    const hash = md5(merchantId + orderId + amount + currency + secretHash).toUpperCase();
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://sandbox.payhere.lk/pay/checkout';
+    form.target = '_blank';
+
+    const fields: Record<string, string> = {
+      merchant_id: merchantId,
+      return_url: window.location.origin,
+      cancel_url: window.location.origin,
+      notify_url: '',
+      order_id: orderId,
+      items: `Invoice ${inv.invoice_number}`,
+      currency,
+      amount,
+      first_name: inv.customer_name.split(' ')[0] || inv.customer_name,
+      last_name: inv.customer_name.split(' ').slice(1).join(' ') || '',
+      email: '',
+      phone: '0000000000',
+      address: 'Sri Lanka',
+      city: 'Colombo',
+      country: 'Sri Lanka',
+      hash,
+    };
+
+    for (const [k, v] of Object.entries(fields)) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = k;
+      inp.value = v;
+      form.appendChild(inp);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
+
   const fmt = (n: number) =>
     'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
@@ -931,7 +982,7 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       <button
                         className="btn btn-secondary btn-sm"
                         onClick={() => openView(inv)}
@@ -944,6 +995,16 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
                       >
                         PDF
                       </button>
+                      {companySettings.payhere_merchant_id && inv.status !== 'Paid' && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => generatePaymentLink(inv)}
+                          title="Generate PayHere payment link for this invoice"
+                          style={{ color: '#0070ba', borderColor: '#0070ba' }}
+                        >
+                          💳 Pay Link
+                        </button>
+                      )}
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => deleteInvoice(inv.id)}
@@ -1120,6 +1181,15 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
               >
                 Close
               </button>
+              {companySettings.payhere_merchant_id && viewInvoice.status !== 'Paid' && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => generatePaymentLink(viewInvoice)}
+                  style={{ color: '#0070ba', borderColor: '#0070ba' }}
+                >
+                  💳 Send Payment Link
+                </button>
+              )}
               <button
                 className="btn btn-primary"
                 onClick={() => exportPDF(viewInvoice, viewLines)}

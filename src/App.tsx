@@ -20,6 +20,7 @@ import Settings from './pages/Settings';
 import ChartOfAccounts from './pages/ChartOfAccounts';
 import PurchaseOrders from './pages/PurchaseOrders';
 import SalesOrders from './pages/SalesOrders';
+import Subscription from './pages/Subscription';
 import './App.css';
 
 export type Page =
@@ -41,7 +42,8 @@ export type Page =
   | 'manufacturing'
   | 'settings'
   | 'categories'
-  | 'coa';
+  | 'coa'
+  | 'subscription';
 
 const menuGroups = [
   {
@@ -136,8 +138,9 @@ export default function App() {
   const currentGroup = menuGroups.find((g) =>
     g.items.some((i) => i.page === page)
   );
+  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings' };
   const currentLabel =
-    currentGroup?.items.find((i) => i.page === page)?.label || 'Dashboard';
+    currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
 
   const renderPage = () => {
     switch (page) {
@@ -222,6 +225,8 @@ export default function App() {
         return <Settings />;
       case 'coa':
         return <ChartOfAccounts />;
+      case 'subscription':
+        return <Subscription />;
       default:
         return <Dashboard nav={nav} />;
     }
@@ -287,7 +292,10 @@ export default function App() {
 
         {/* Footer */}
         <div className="sidebar-footer">
-          <button className="nav-item" onClick={() => nav('settings')}>
+          <button className={`nav-item ${page === 'subscription' ? 'active' : ''}`} onClick={() => nav('subscription')}>
+            {sidebarOpen ? 'Subscription' : 'Su'}
+          </button>
+          <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => nav('settings')}>
             {sidebarOpen ? 'Settings' : 'St'}
           </button>
           <button

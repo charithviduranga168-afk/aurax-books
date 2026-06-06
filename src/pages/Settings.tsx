@@ -18,7 +18,13 @@ export default function Settings() {
     payment_prefix: 'PAY-',
     grn_prefix: 'GRN-',
     costing_method: 'FIFO',
+    payhere_merchant_id: '',
+    payhere_secret: '',
+    paypal_client_id: '',
+    gateway_provider: '',
   });
+  const [showPayhereSecret, setShowPayhereSecret] = useState(false);
+  const [gwSaved, setGwSaved] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,6 +56,10 @@ export default function Settings() {
         payment_prefix: data.payment_prefix || 'PAY-',
         grn_prefix: data.grn_prefix || 'GRN-',
         costing_method: data.costing_method || 'FIFO',
+        payhere_merchant_id: data.payhere_merchant_id || '',
+        payhere_secret: data.payhere_secret || '',
+        paypal_client_id: data.paypal_client_id || '',
+        gateway_provider: data.gateway_provider || '',
       });
     }
     setLoading(false);
@@ -76,6 +86,10 @@ export default function Settings() {
       payment_prefix: form.payment_prefix,
       grn_prefix: form.grn_prefix,
       costing_method: form.costing_method,
+      payhere_merchant_id: form.payhere_merchant_id,
+      payhere_secret: form.payhere_secret,
+      paypal_client_id: form.paypal_client_id,
+      gateway_provider: form.gateway_provider,
     };
 
     if (settingsId) {
@@ -318,6 +332,86 @@ export default function Settings() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Payment Gateway */}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div
+              style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--brand)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Payment Gateway (Your Business)
+            </div>
+            {form.payhere_merchant_id ? (
+              <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, background: 'rgba(34,197,94,0.1)', color: '#16a34a' }}>
+                Connected
+              </span>
+            ) : (
+              <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, background: 'rgba(245,158,11,0.1)', color: '#d97706' }}>
+                Not Configured
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              background: 'rgba(124,58,237,0.06)',
+              border: '1px solid rgba(124,58,237,0.15)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              fontSize: '12px',
+              color: 'var(--text2)',
+              lineHeight: 1.6,
+            }}
+          >
+            <strong style={{ color: 'var(--text1)' }}>PayHere</strong> lets you generate payment links for your own customer invoices.
+            Enter your PayHere merchant credentials below to unlock this feature. Without these, PayHere payment links are not available.
+          </div>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>PayHere Merchant ID</label>
+              <input
+                value={form.payhere_merchant_id}
+                onChange={(e) => setForm({ ...form, payhere_merchant_id: e.target.value })}
+                placeholder="e.g. 1228327"
+              />
+            </div>
+            <div className="form-group" style={{ position: 'relative' }}>
+              <label>PayHere Merchant Secret</label>
+              <input
+                type={showPayhereSecret ? 'text' : 'password'}
+                value={form.payhere_secret}
+                onChange={(e) => setForm({ ...form, payhere_secret: e.target.value })}
+                placeholder="Your PayHere secret key"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPayhereSecret(!showPayhereSecret)}
+                style={{ position: 'absolute', right: '10px', top: '34px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: '12px' }}
+              >
+                {showPayhereSecret ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <div className="form-group full">
+              <label>PayPal Client ID <span style={{ fontSize: '11px', color: 'var(--text3)', fontWeight: 400 }}>(optional, for PayPal payment links)</span></label>
+              <input
+                value={form.paypal_client_id}
+                onChange={(e) => setForm({ ...form, paypal_client_id: e.target.value })}
+                placeholder="AaBb... (from PayPal Developer Dashboard)"
+              />
+            </div>
+          </div>
+          {form.payhere_merchant_id && (
+            <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', fontSize: '12px', color: '#15803d' }}>
+              PayHere is configured. Payment link generation is now available on your invoices.
+            </div>
+          )}
         </div>
 
         {/* Account info */}
