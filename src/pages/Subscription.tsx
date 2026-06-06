@@ -291,18 +291,21 @@ export default function Subscription() {
               Choose your preferred payment method to pay <strong>Rs. {monthlyTotal.toLocaleString()}</strong> for {currentPeriod}.
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button
-                onClick={payViaPayHere}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}
-                title="Pay via PayHere"
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={payViaPayHere}
+                  style={{ minWidth: '100px' }}
+                >
+                  Pay
+                </button>
                 <img
                   src="https://www.payhere.lk/downloads/images/payhere_short_banner.png"
                   alt="PayHere"
-                  width="250"
+                  width="180"
                   style={{ display: 'block', borderRadius: '6px' }}
                 />
-              </button>
+              </div>
             </div>
           </div>
         </div>
