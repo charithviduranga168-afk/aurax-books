@@ -7,6 +7,7 @@ interface Product {
   unit: string;
   cost_price: number;
   stock_qty: number;
+  type: string;
 }
 
 interface BomLine {
@@ -44,7 +45,7 @@ interface ProductionOrder {
 const UNITS = ['Pcs', 'Kg', 'L', 'M', 'Box', 'Pack', 'Set', 'Unit'];
 
 export default function Manufacturing() {
-  const [tab, setTab] = useState<'bom' | 'orders'>('bom');
+  const [tab, setTab] = useState<'bom' | 'orders' | 'movements'>('bom');
   const [products, setProducts] = useState<Product[]>([]);
   const [boms, setBoms] = useState<Bom[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
@@ -75,6 +76,20 @@ export default function Manufacturing() {
   });
   const [savingOrder, setSavingOrder] = useState(false);
 
+  // Custom in-app dialog (replaces native confirm()/alert())
+  const [dialog, setDialog] = useState<{ message: string; onConfirm?: () => void } | null>(null);
+
+  function showAlert(message: string) {
+    setDialog({ message });
+  }
+
+  function showConfirm(message: string, onConfirm: () => void) {
+    setDialog({ message, onConfirm });
+  }
+
+  // Strips leading minus signs so quantity/price fields can never go negative
+  const noNegative = (v: string) => v.replace(/^-+/, '');
+
   useEffect(() => {
     loadAll();
   }, []);
@@ -87,7 +102,7 @@ export default function Manufacturing() {
     const [prodRes, bomRes, orderRes] = await Promise.all([
       supabase
         .from('products')
-        .select('id, name, unit, cost_price, stock_qty')
+        .select('id, name, unit, cost_price, stock_qty, type')
         .eq('user_id', user.id)
         .order('name'),
       supabase
@@ -171,11 +186,19 @@ export default function Manufacturing() {
   }
 
   async function handleSaveBom() {
-    if (!bomForm.finished_product_id) return alert('Select a finished product');
-    if (!bomForm.output_qty || parseFloat(bomForm.output_qty) <= 0)
-      return alert('Quantity produced must be greater than zero');
+    if (!bomForm.finished_product_id) {
+      showAlert('Select a finished product');
+      return;
+    }
+    if (!bomForm.output_qty || parseFloat(bomForm.output_qty) <= 0) {
+      showAlert('Quantity produced must be greater than zero');
+      return;
+    }
     const validLines = bomLines.filter((l) => l.component_id);
-    if (validLines.length === 0) return alert('Add at least one material line');
+    if (validLines.length === 0) {
+      showAlert('Add at least one material line');
+      return;
+    }
 
     setSavingBom(true);
     const {
@@ -206,7 +229,8 @@ export default function Manufacturing() {
         .single();
       if (error || !data) {
         setSavingBom(false);
-        return alert('Failed to save BOM');
+        showAlert('Failed to save BOM');
+        return;
       }
       bomId = data.id;
     }
@@ -226,11 +250,12 @@ export default function Manufacturing() {
     loadAll();
   }
 
-  async function handleDeleteBom(b: Bom) {
-    if (!confirm(`Delete BOM for "${b.finished?.name || 'this product'}"?`)) return;
-    await supabase.from('bom_lines').delete().eq('bom_id', b.id);
-    await supabase.from('bom').delete().eq('id', b.id);
-    loadAll();
+  function handleDeleteBom(b: Bom) {
+    showConfirm(`Delete BOM for "${b.finished?.name || 'this product'}"?`, async () => {
+      await supabase.from('bom_lines').delete().eq('bom_id', b.id);
+      await supabase.from('bom').delete().eq('id', b.id);
+      loadAll();
+    });
   }
 
   // ---------- Production order helpers ----------
@@ -254,9 +279,14 @@ export default function Manufacturing() {
   }
 
   async function handleSaveOrder() {
-    if (!orderForm.bom_id) return alert('Select a Bill of Materials');
-    if (!orderForm.qty_to_produce || parseFloat(orderForm.qty_to_produce) <= 0)
-      return alert('Quantity must be greater than zero');
+    if (!orderForm.bom_id) {
+      showAlert('Select a Bill of Materials');
+      return;
+    }
+    if (!orderForm.qty_to_produce || parseFloat(orderForm.qty_to_produce) <= 0) {
+      showAlert('Quantity must be greater than zero');
+      return;
+    }
 
     setSavingOrder(true);
     const {
@@ -292,41 +322,48 @@ export default function Manufacturing() {
 
   async function updateOrderStatus(order: ProductionOrder, newStatus: string) {
     if (newStatus === 'Completed') {
-      if (
-        !confirm(
-          `Complete order ${order.po_number}? This will deduct raw materials and add finished goods to stock.`
-        )
-      )
-        return;
       const bom = order.bom;
-      if (!bom) return alert('BOM not found for this order');
-      const batches = order.qty_to_produce / (bom.output_qty || 1);
-
-      for (const line of bom.bom_lines || []) {
-        const product = products.find((p) => p.id === line.component_id);
-        if (!product) continue;
-        const used = line.qty_required * batches;
-        await supabase
-          .from('products')
-          .update({ stock_qty: (product.stock_qty || 0) - used })
-          .eq('id', product.id);
+      if (!bom) {
+        showAlert('BOM not found for this order');
+        return;
       }
+      showConfirm(
+        `Complete order ${order.po_number}? This will deduct raw materials and add finished goods to stock.`,
+        async () => {
+          const batches = order.qty_to_produce / (bom.output_qty || 1);
 
-      const finishedProduct = products.find((p) => p.id === bom.finished_product_id);
-      if (finishedProduct) {
-        await supabase
-          .from('products')
-          .update({ stock_qty: (finishedProduct.stock_qty || 0) + order.qty_to_produce })
-          .eq('id', finishedProduct.id);
-      }
+          for (const line of bom.bom_lines || []) {
+            const product = products.find((p) => p.id === line.component_id);
+            if (!product) continue;
+            const used = line.qty_required * batches;
+            await supabase
+              .from('products')
+              .update({ stock_qty: (product.stock_qty || 0) - used })
+              .eq('id', product.id);
+          }
 
-      await supabase.from('production_orders').update({ status: 'Completed' }).eq('id', order.id);
-    } else if (newStatus === 'Cancelled') {
-      if (!confirm(`Cancel order ${order.po_number}?`)) return;
-      await supabase.from('production_orders').update({ status: 'Cancelled' }).eq('id', order.id);
-    } else {
-      await supabase.from('production_orders').update({ status: newStatus }).eq('id', order.id);
+          const finishedProduct = products.find((p) => p.id === bom.finished_product_id);
+          if (finishedProduct) {
+            await supabase
+              .from('products')
+              .update({ stock_qty: (finishedProduct.stock_qty || 0) + order.qty_to_produce })
+              .eq('id', finishedProduct.id);
+          }
+
+          await supabase.from('production_orders').update({ status: 'Completed' }).eq('id', order.id);
+          loadAll();
+        }
+      );
+      return;
     }
+    if (newStatus === 'Cancelled') {
+      showConfirm(`Cancel order ${order.po_number}?`, async () => {
+        await supabase.from('production_orders').update({ status: 'Cancelled' }).eq('id', order.id);
+        loadAll();
+      });
+      return;
+    }
+    await supabase.from('production_orders').update({ status: newStatus }).eq('id', order.id);
     loadAll();
   }
 
@@ -343,6 +380,32 @@ export default function Manufacturing() {
     return <span className={`badge ${map[status] || 'badge-blue'}`}>{status}</span>;
   }
 
+  // Derived stock-movement ledger from completed production orders
+  const movements = orders
+    .filter((o) => o.status === 'Completed' && o.bom)
+    .flatMap((o) => {
+      const bom = o.bom as Bom;
+      const batches = o.qty_to_produce / (bom.output_qty || 1);
+      const rows = (bom.bom_lines || []).map((l) => ({
+        date: o.date,
+        po: o.po_number,
+        product: l.component?.name || '—',
+        direction: 'OUT' as const,
+        qty: l.qty_required * batches,
+        unit: l.unit,
+      }));
+      rows.push({
+        date: o.date,
+        po: o.po_number,
+        product: bom.finished?.name || '—',
+        direction: 'IN' as const,
+        qty: o.qty_to_produce,
+        unit: bom.unit,
+      });
+      return rows;
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
   return (
     <div>
       <div className="page-header">
@@ -350,14 +413,15 @@ export default function Manufacturing() {
           <div className="page-title">Manufacturing</div>
           <div className="page-sub">Bills of Materials and Production Orders</div>
         </div>
-        {tab === 'bom' ? (
+        {tab === 'bom' && (
           <button
             className="btn btn-primary"
             onClick={() => (showBomForm ? setShowBomForm(false) : openAddBom())}
           >
             {showBomForm ? 'Close' : '+ New BOM'}
           </button>
-        ) : (
+        )}
+        {tab === 'orders' && (
           <button
             className="btn btn-primary"
             onClick={() => (showOrderForm ? setShowOrderForm(false) : openAddOrder())}
@@ -406,6 +470,26 @@ export default function Manufacturing() {
         >
           Production Orders
         </button>
+        <button
+          onClick={() => {
+            setTab('movements');
+            setShowBomForm(false);
+            setShowOrderForm(false);
+          }}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 600,
+            background: tab === 'movements' ? 'var(--brand)' : 'var(--bg2)',
+            color: tab === 'movements' ? '#fff' : 'var(--text2)',
+            border: tab === 'movements' ? 'none' : '1px solid var(--border)',
+            transition: 'all 0.15s',
+          }}
+        >
+          Inventory Movements
+        </button>
       </div>
 
       {tab === 'bom' && (
@@ -436,19 +520,25 @@ export default function Manufacturing() {
                       }}
                     >
                       <option value="">— Select Product —</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
+                      {products
+                        .filter((p) => p.type === 'Finished Good')
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
                     </select>
+                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>
+                      Only products categorized as "Finished Good" can have a BOM.
+                    </div>
                   </div>
                   <div className="form-group">
                     <label>Quantity Produced *</label>
                     <input
                       type="number"
+                      min="0"
                       value={bomForm.output_qty}
-                      onChange={(e) => setBomForm({ ...bomForm, output_qty: e.target.value })}
+                      onChange={(e) => setBomForm({ ...bomForm, output_qty: noNegative(e.target.value) })}
                     />
                   </div>
                   <div className="form-group">
@@ -522,8 +612,9 @@ export default function Manufacturing() {
                         <label>Quantity</label>
                         <input
                           type="number"
+                          min="0"
                           value={line.qty_required}
-                          onChange={(e) => updateBomLine(idx, { qty_required: e.target.value })}
+                          onChange={(e) => updateBomLine(idx, { qty_required: noNegative(e.target.value) })}
                         />
                       </div>
                       <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -538,8 +629,9 @@ export default function Manufacturing() {
                         <label>Cost Price (LKR)</label>
                         <input
                           type="number"
+                          min="0"
                           value={line.cost_price}
-                          onChange={(e) => updateBomLine(idx, { cost_price: e.target.value })}
+                          onChange={(e) => updateBomLine(idx, { cost_price: noNegative(e.target.value) })}
                         />
                       </div>
                       <button
@@ -661,8 +753,11 @@ export default function Manufacturing() {
                     <label>Quantity to Produce *</label>
                     <input
                       type="number"
+                      min="0"
                       value={orderForm.qty_to_produce}
-                      onChange={(e) => setOrderForm({ ...orderForm, qty_to_produce: e.target.value })}
+                      onChange={(e) =>
+                        setOrderForm({ ...orderForm, qty_to_produce: noNegative(e.target.value) })
+                      }
                     />
                   </div>
                   <div className="form-group">
@@ -780,6 +875,103 @@ export default function Manufacturing() {
             )}
           </div>
         </>
+      )}
+
+      {tab === 'movements' && (
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <h3>Inventory Movements</h3>
+            <div className="page-sub" style={{ margin: 0 }}>
+              Stock changes from completed production orders
+            </div>
+          </div>
+          {loading ? (
+            <div className="empty-state">
+              <p>Loading...</p>
+            </div>
+          ) : movements.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📦</div>
+              <h3>No stock movements yet</h3>
+              <p>Movements appear here once production orders are completed</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Order #</th>
+                  <th>Product</th>
+                  <th>Movement</th>
+                  <th>Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movements.map((m, idx) => (
+                  <tr key={idx}>
+                    <td style={{ color: 'var(--text2)' }}>{m.date}</td>
+                    <td style={{ fontWeight: 600 }}>{m.po}</td>
+                    <td>{m.product}</td>
+                    <td>
+                      <span className={`badge ${m.direction === 'IN' ? 'badge-green' : 'badge-red'}`}>
+                        {m.direction === 'IN' ? 'Stock In' : 'Stock Out'}
+                      </span>
+                    </td>
+                    <td
+                      style={{
+                        fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 600,
+                        color: m.direction === 'IN' ? 'var(--green)' : 'var(--red)',
+                      }}
+                    >
+                      {m.direction === 'IN' ? '+' : '-'}
+                      {m.qty} {m.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {dialog && (
+        <div className="modal-overlay" onClick={() => setDialog(null)}>
+          <div className="modal" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{dialog.onConfirm ? 'Confirm' : 'Notice'}</div>
+              <button className="modal-close" onClick={() => setDialog(null)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, color: 'var(--text2)', lineHeight: 1.6 }}>{dialog.message}</p>
+            </div>
+            <div className="modal-footer">
+              {dialog.onConfirm ? (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setDialog(null)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      const action = dialog.onConfirm;
+                      setDialog(null);
+                      action?.();
+                    }}
+                  >
+                    Confirm
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-primary" onClick={() => setDialog(null)}>
+                  OK
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
