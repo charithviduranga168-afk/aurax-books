@@ -42,59 +42,42 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
   const [products, setProducts] = useState<any[]>([]);
   const [companySettings, setCompanySettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(() => !!prefillFromSO);
   const [showView, setShowView] = useState(false);
   const [viewInvoice, setViewInvoice] = useState<any>(null);
   const [viewLines, setViewLines] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [saving, setSaving] = useState(false);
-  const [activeSoId, setActiveSoId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split('T')[0],
-    customer_id: '',
-    notes: '',
-    discount: '0',
-    tax_rate: '0',
+  const [activeSoId, setActiveSoId] = useState<string | null>(() => prefillFromSO?.so?.id || null);
+  const [form, setForm] = useState(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const due = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    if (prefillFromSO?.so) {
+      return { date: today, due_date: due, customer_id: prefillFromSO.so.customer_id || '', notes: `Ref: ${prefillFromSO.so.so_number}`, discount: '0', tax_rate: '0' };
+    }
+    return { date: today, due_date: due, customer_id: '', notes: '', discount: '0', tax_rate: '0' };
   });
-  const [lines, setLines] = useState<LineItem[]>([
-    {
-      product_id: '',
-      product_name: '',
-      qty: 1,
-      unit_price: 0,
-      discount_pct: 0,
-      line_total: 0,
-      cost_price: 0,
-      cogs: 0,
-    },
-  ]);
+  const [lines, setLines] = useState<LineItem[]>(() => {
+    if (prefillFromSO?.lines?.length) {
+      return prefillFromSO.lines.map((l: any) => ({
+        product_id: l.product_id,
+        product_name: l.product_name,
+        qty: l.qty,
+        unit_price: l.unit_price,
+        discount_pct: l.discount_pct || 0,
+        line_total: l.line_total,
+        cost_price: 0,
+        cogs: 0,
+      }));
+    }
+    return [{ product_id: '', product_name: '', qty: 1, unit_price: 0, discount_pct: 0, line_total: 0, cost_price: 0, cogs: 0 }];
+  });
 
   useEffect(() => {
     loadData();
+    if (prefillFromSO) onConsumeSoPrefill?.();
   }, []);
-
-  useEffect(() => {
-    if (!prefillFromSO) return;
-    const { so, lines: soLines } = prefillFromSO;
-    setForm(f => ({ ...f, customer_id: so.customer_id || '', notes: `Ref: ${so.so_number}` }));
-    setLines((soLines || []).map((l: any) => ({
-      product_id: l.product_id,
-      product_name: l.product_name,
-      qty: l.qty,
-      unit_price: l.unit_price,
-      discount_pct: l.discount_pct || 0,
-      line_total: l.line_total,
-      cost_price: 0,
-      cogs: 0,
-    })));
-    setActiveSoId(so.id);
-    setShowForm(true);
-    onConsumeSoPrefill?.();
-  }, [prefillFromSO]);
 
   async function loadData() {
     const {
