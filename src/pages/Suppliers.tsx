@@ -15,7 +15,7 @@ interface Supplier {
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -48,7 +48,7 @@ export default function Suppliers() {
   function openAdd() {
     setEditing(null);
     setForm({ name: '', email: '', phone: '', address: '', credit_limit: '0' });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   function openEdit(s: Supplier) {
@@ -60,7 +60,7 @@ export default function Suppliers() {
       address: s.address || '',
       credit_limit: String(s.credit_limit || 0),
     });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   async function handleSave() {
@@ -94,7 +94,7 @@ export default function Suppliers() {
       });
     }
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     loadSuppliers();
   }
 
@@ -121,10 +121,101 @@ export default function Suppliers() {
           <div className="page-title">Suppliers</div>
           <div className="page-sub">{suppliers.length} total suppliers</div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          + Add Supplier
+        <button
+          className="btn btn-primary"
+          onClick={() => (showForm ? setShowForm(false) : openAdd())}
+        >
+          {showForm ? 'Close' : '+ Add Supplier'}
         </button>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div className="inline-panel-title">
+              {editing ? 'Edit Supplier' : 'Add New Supplier'}
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid">
+              <div className="form-group full">
+                <label>Supplier Name *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. XYZ Traders"
+                />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                  placeholder="email@supplier.lk"
+                />
+              </div>
+              <div className="form-group">
+                <label>Phone</label>
+                <input
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm({ ...form, phone: e.target.value })
+                  }
+                  placeholder="+94 XX XXX XXXX"
+                />
+              </div>
+              <div className="form-group full">
+                <label>Address</label>
+                <textarea
+                  value={form.address}
+                  onChange={(e) =>
+                    setForm({ ...form, address: e.target.value })
+                  }
+                  placeholder="Street, City"
+                  rows={2}
+                />
+              </div>
+              <div className="form-group">
+                <label>Credit Limit (LKR)</label>
+                <input
+                  type="number"
+                  value={form.credit_limit}
+                  onChange={(e) =>
+                    setForm({ ...form, credit_limit: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? 'Saving...'
+                : editing
+                ? 'Save Changes'
+                : 'Add Supplier'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-toolbar">
@@ -220,99 +311,6 @@ export default function Suppliers() {
         )}
       </div>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal">
-            <div className="modal-header">
-              <div className="modal-title">
-                {editing ? 'Edit Supplier' : 'Add New Supplier'}
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label>Supplier Name *</label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. XYZ Traders"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
-                    placeholder="email@supplier.lk"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
-                    placeholder="+94 XX XXX XXXX"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label>Address</label>
-                  <textarea
-                    value={form.address}
-                    onChange={(e) =>
-                      setForm({ ...form, address: e.target.value })
-                    }
-                    placeholder="Street, City"
-                    rows={2}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Credit Limit (LKR)</label>
-                  <input
-                    type="number"
-                    value={form.credit_limit}
-                    onChange={(e) =>
-                      setForm({ ...form, credit_limit: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving
-                  ? 'Saving...'
-                  : editing
-                  ? 'Save Changes'
-                  : 'Add Supplier'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

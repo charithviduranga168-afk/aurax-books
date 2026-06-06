@@ -10,7 +10,7 @@ export default function Payments() {
   const [cashBankAccounts, setCashBankAccounts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -137,7 +137,7 @@ export default function Payments() {
     }
 
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     setForm({
       date: new Date().toISOString().split('T')[0],
       supplier_id: '',
@@ -278,10 +278,153 @@ export default function Payments() {
             </strong>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          + New Payment
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? 'Close' : '+ New Payment'}
         </button>
       </div>
+
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div>
+              <div className="inline-panel-title">New Payment</div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--text2)',
+                  marginTop: '2px',
+                }}
+              >
+                Next: {generatePaymentNumber(payments)}
+              </div>
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Payment Date *</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Supplier *</label>
+                <select
+                  value={form.supplier_id}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      supplier_id: e.target.value,
+                      bill_id: '',
+                    })
+                  }
+                >
+                  <option value="">— Select Supplier —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group full">
+                <label>Bill *</label>
+                <select
+                  value={form.bill_id}
+                  onChange={(e) => {
+                    const b = bills.find((b) => b.id === e.target.value);
+                    setForm({
+                      ...form,
+                      bill_id: e.target.value,
+                      amount: b ? String(b.balance) : '',
+                    });
+                  }}
+                >
+                  <option value="">— Select Bill —</option>
+                  {filteredBills.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.bill_number} — {b.supplier_name} — Balance:{' '}
+                      {fmt(b.balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Amount (LKR) *</label>
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={(e) =>
+                    setForm({ ...form, amount: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Payment Method</label>
+                <select
+                  value={form.payment_method}
+                  onChange={(e) =>
+                    setForm({ ...form, payment_method: e.target.value })
+                  }
+                >
+                  <option value="">— Select Account —</option>
+                  {cashBankAccounts.map((a) => (
+                    <option key={a.id} value={`${a.code} - ${a.name}`}>
+                      {a.code} - {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Reference</label>
+                <input
+                  value={form.reference}
+                  onChange={(e) =>
+                    setForm({ ...form, reference: e.target.value })
+                  }
+                  placeholder="Transfer ref, cheque no..."
+                />
+              </div>
+              <div className="form-group full">
+                <label>Notes</label>
+                <input
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save & Print'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-toolbar">
@@ -365,150 +508,6 @@ export default function Payments() {
         )}
       </div>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal">
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">New Payment</div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--text2)',
-                    marginTop: '2px',
-                  }}
-                >
-                  Next: {generatePaymentNumber(payments)}
-                </div>
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Payment Date *</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Supplier *</label>
-                  <select
-                    value={form.supplier_id}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        supplier_id: e.target.value,
-                        bill_id: '',
-                      })
-                    }
-                  >
-                    <option value="">— Select Supplier —</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label>Bill *</label>
-                  <select
-                    value={form.bill_id}
-                    onChange={(e) => {
-                      const b = bills.find((b) => b.id === e.target.value);
-                      setForm({
-                        ...form,
-                        bill_id: e.target.value,
-                        amount: b ? String(b.balance) : '',
-                      });
-                    }}
-                  >
-                    <option value="">— Select Bill —</option>
-                    {filteredBills.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.bill_number} — {b.supplier_name} — Balance:{' '}
-                        {fmt(b.balance)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Amount (LKR) *</label>
-                  <input
-                    type="number"
-                    value={form.amount}
-                    onChange={(e) =>
-                      setForm({ ...form, amount: e.target.value })
-                    }
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Payment Method</label>
-                  <select
-                    value={form.payment_method}
-                    onChange={(e) =>
-                      setForm({ ...form, payment_method: e.target.value })
-                    }
-                  >
-                    <option value="">— Select Account —</option>
-                    {cashBankAccounts.map((a) => (
-                      <option key={a.id} value={`${a.code} - ${a.name}`}>
-                        {a.code} - {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Reference</label>
-                  <input
-                    value={form.reference}
-                    onChange={(e) =>
-                      setForm({ ...form, reference: e.target.value })
-                    }
-                    placeholder="Transfer ref, cheque no..."
-                  />
-                </div>
-                <div className="form-group full">
-                  <label>Notes</label>
-                  <input
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Save & Print'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

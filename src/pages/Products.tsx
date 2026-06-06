@@ -19,7 +19,7 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -76,7 +76,7 @@ export default function Products() {
       unit: 'Pcs',
       notes: '',
     });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   function openEdit(p: Product) {
@@ -92,7 +92,7 @@ export default function Products() {
       unit: p.unit || 'Pcs',
       notes: p.notes || '',
     });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   async function handleSave() {
@@ -125,7 +125,7 @@ export default function Products() {
         });
     }
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     loadData();
   }
 
@@ -164,10 +164,162 @@ export default function Products() {
             )}
           </div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          + Add Product
+        <button
+          className="btn btn-primary"
+          onClick={() => (showForm ? setShowForm(false) : openAdd())}
+        >
+          {showForm ? 'Close' : '+ Add Product'}
         </button>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div className="inline-panel-title">
+              {editing ? 'Edit Product' : 'Add New Product'}
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid">
+              <div className="form-group full">
+                <label>Product Name *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Office Chair"
+                />
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm({ ...form, category: e.target.value })
+                  }
+                >
+                  <option value="">— Select Category —</option>
+                  {categories.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                  <option value="__new__">+ Add new category...</option>
+                </select>
+                {form.category === '__new__' && (
+                  <input
+                    style={{ marginTop: '6px' }}
+                    placeholder="Type new category name"
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
+                    }
+                  />
+                )}
+              </div>
+              <div className="form-group">
+                <label>Type</label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                >
+                  <option>Stock Item</option>
+                  <option>Service</option>
+                  <option>Raw Material</option>
+                  <option>Finished Good</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Sales Price (LKR)</label>
+                <input
+                  type="number"
+                  value={form.sales_price}
+                  onChange={(e) =>
+                    setForm({ ...form, sales_price: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Cost Price (LKR)</label>
+                <input
+                  type="number"
+                  value={form.cost_price}
+                  onChange={(e) =>
+                    setForm({ ...form, cost_price: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Opening Stock Qty</label>
+                <input
+                  type="number"
+                  value={form.stock_qty}
+                  onChange={(e) =>
+                    setForm({ ...form, stock_qty: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Reorder Level</label>
+                <input
+                  type="number"
+                  value={form.reorder_level}
+                  onChange={(e) =>
+                    setForm({ ...form, reorder_level: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Unit</label>
+                <select
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                >
+                  <option>Pcs</option>
+                  <option>Kg</option>
+                  <option>L</option>
+                  <option>M</option>
+                  <option>Box</option>
+                  <option>Pack</option>
+                  <option>Set</option>
+                  <option>Unit</option>
+                </select>
+              </div>
+              <div className="form-group full">
+                <label>Notes</label>
+                <textarea
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value })
+                  }
+                  rows={2}
+                  placeholder="Optional notes"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? 'Saving...'
+                : editing
+                ? 'Save Changes'
+                : 'Add Product'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-toolbar">
@@ -317,160 +469,6 @@ export default function Products() {
         )}
       </div>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal">
-            <div className="modal-header">
-              <div className="modal-title">
-                {editing ? 'Edit Product' : 'Add New Product'}
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label>Product Name *</label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. Office Chair"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      setForm({ ...form, category: e.target.value })
-                    }
-                  >
-                    <option value="">— Select Category —</option>
-                    {categories.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                    <option value="__new__">+ Add new category...</option>
-                  </select>
-                  {form.category === '__new__' && (
-                    <input
-                      style={{ marginTop: '6px' }}
-                      placeholder="Type new category name"
-                      onChange={(e) =>
-                        setForm({ ...form, category: e.target.value })
-                      }
-                    />
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>Type</label>
-                  <select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  >
-                    <option>Stock Item</option>
-                    <option>Service</option>
-                    <option>Raw Material</option>
-                    <option>Finished Good</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Sales Price (LKR)</label>
-                  <input
-                    type="number"
-                    value={form.sales_price}
-                    onChange={(e) =>
-                      setForm({ ...form, sales_price: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Cost Price (LKR)</label>
-                  <input
-                    type="number"
-                    value={form.cost_price}
-                    onChange={(e) =>
-                      setForm({ ...form, cost_price: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Opening Stock Qty</label>
-                  <input
-                    type="number"
-                    value={form.stock_qty}
-                    onChange={(e) =>
-                      setForm({ ...form, stock_qty: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Reorder Level</label>
-                  <input
-                    type="number"
-                    value={form.reorder_level}
-                    onChange={(e) =>
-                      setForm({ ...form, reorder_level: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Unit</label>
-                  <select
-                    value={form.unit}
-                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                  >
-                    <option>Pcs</option>
-                    <option>Kg</option>
-                    <option>L</option>
-                    <option>M</option>
-                    <option>Box</option>
-                    <option>Pack</option>
-                    <option>Set</option>
-                    <option>Unit</option>
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label>Notes</label>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                    rows={2}
-                    placeholder="Optional notes"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving
-                  ? 'Saving...'
-                  : editing
-                  ? 'Save Changes'
-                  : 'Add Product'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

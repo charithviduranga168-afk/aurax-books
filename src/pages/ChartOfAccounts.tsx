@@ -64,7 +64,7 @@ const DEFAULT_ACCOUNTS = [
 export default function ChartOfAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [editAccount, setEditAccount] = useState<Account | null>(null)
   const [filterType, setFilterType] = useState('All')
   const [search, setSearch] = useState('')
@@ -107,7 +107,7 @@ export default function ChartOfAccounts() {
   function openAdd() {
     setEditAccount(null)
     setForm({ code: '', name: '', type: 'Asset', sub_type: 'Cash & Bank', description: '', is_active: true })
-    setShowModal(true)
+    setShowForm(true)
   }
 
   function openEdit(acc: Account) {
@@ -116,7 +116,7 @@ export default function ChartOfAccounts() {
       code: acc.code, name: acc.name, type: acc.type,
       sub_type: acc.sub_type, description: acc.description || '', is_active: acc.is_active
     })
-    setShowModal(true)
+    setShowForm(true)
   }
 
   async function saveAccount() {
@@ -135,7 +135,7 @@ export default function ChartOfAccounts() {
         is_active: form.is_active, is_system: false, user_id: user.id
       })
     }
-    setShowModal(false)
+    setShowForm(false)
     loadAccounts()
   }
 
@@ -176,9 +176,76 @@ export default function ChartOfAccounts() {
               {seeding ? 'Setting up...' : '⚡ Load Default Accounts'}
             </button>
           )}
-          <button className="btn btn-primary" onClick={openAdd}>+ New Account</button>
+          <button className="btn btn-primary" onClick={() => (showForm ? setShowForm(false) : openAdd())}>{showForm ? 'Close' : '+ New Account'}</button>
         </div>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div className="inline-panel-title">{editAccount ? 'Edit Account' : 'New Account'}</div>
+            <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
+          </div>
+          <div className="inline-panel-body">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>Account Code *</label>
+                <input
+                  placeholder="e.g. 1100"
+                  value={form.code}
+                  onChange={e => setForm({ ...form, code: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Account Name *</label>
+                <input
+                  placeholder="e.g. Bank Account"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>Account Type *</label>
+                <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value, sub_type: SUB_TYPES[e.target.value][0] })}>
+                  {ACCOUNT_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Sub Type *</label>
+                <select value={form.sub_type} onChange={e => setForm({ ...form, sub_type: e.target.value })}>
+                  {SUB_TYPES[form.type].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <input
+                placeholder="Brief description of this account"
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
+                Active account
+              </label>
+            </div>
+            {form.sub_type === 'Cash & Bank' && (
+              <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand)' }}>
+                💡 Cash & Bank accounts will be available as payment methods in Invoices, Receipts, Bills and Payments.
+              </div>
+            )}
+          </div>
+          <div className="inline-panel-footer">
+            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={saveAccount}>
+              {editAccount ? 'Save Changes' : 'Create Account'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -296,75 +363,6 @@ export default function ChartOfAccounts() {
       ))}
 
       {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div className="modal-header">
-              <h2>{editAccount ? 'Edit Account' : 'New Account'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label>Account Code *</label>
-                  <input
-                    placeholder="e.g. 1100"
-                    value={form.code}
-                    onChange={e => setForm({ ...form, code: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Account Name *</label>
-                  <input
-                    placeholder="e.g. Bank Account"
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label>Account Type *</label>
-                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value, sub_type: SUB_TYPES[e.target.value][0] })}>
-                    {ACCOUNT_TYPES.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Sub Type *</label>
-                  <select value={form.sub_type} onChange={e => setForm({ ...form, sub_type: e.target.value })}>
-                    {SUB_TYPES[form.type].map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <input
-                  placeholder="Brief description of this account"
-                  value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
-                  Active account
-                </label>
-              </div>
-              {form.sub_type === 'Cash & Bank' && (
-                <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand)' }}>
-                  💡 Cash & Bank accounts will be available as payment methods in Invoices, Receipts, Bills and Payments.
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveAccount}>
-                {editAccount ? 'Save Changes' : 'Create Account'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

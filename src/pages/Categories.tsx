@@ -11,7 +11,7 @@ interface Category {
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [form, setForm] = useState({ name: '', type: 'Product' });
   const [saving, setSaving] = useState(false);
@@ -37,13 +37,13 @@ export default function Categories() {
   function openAdd() {
     setEditing(null);
     setForm({ name: '', type: 'Product' });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   function openEdit(c: Category) {
     setEditing(c);
     setForm({ name: c.name, type: c.type });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   async function handleSave() {
@@ -64,7 +64,7 @@ export default function Categories() {
         .insert({ user_id: user.id, name: form.name, type: form.type });
     }
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     loadCategories();
   }
 
@@ -87,10 +87,70 @@ export default function Categories() {
           <div className="page-title">Categories</div>
           <div className="page-sub">{categories.length} total categories</div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          + Add Category
+        <button
+          className="btn btn-primary"
+          onClick={() => (showForm ? setShowForm(false) : openAdd())}
+        >
+          {showForm ? 'Close' : '+ Add Category'}
         </button>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div className="inline-panel-title">
+              {editing ? 'Edit Category' : 'Add Category'}
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid cols-1">
+              <div className="form-group">
+                <label>Category Name *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Electronics, Furniture"
+                />
+              </div>
+              <div className="form-group">
+                <label>Type</label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                >
+                  <option>Product</option>
+                  <option>Expense</option>
+                  <option>Service</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? 'Saving...'
+                : editing
+                ? 'Save Changes'
+                : 'Add Category'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="empty-state">
@@ -159,68 +219,6 @@ export default function Categories() {
         ))
       )}
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal">
-            <div className="modal-header">
-              <div className="modal-title">
-                {editing ? 'Edit Category' : 'Add Category'}
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid cols-1">
-                <div className="form-group">
-                  <label>Category Name *</label>
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="e.g. Electronics, Furniture"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Type</label>
-                  <select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  >
-                    <option>Product</option>
-                    <option>Expense</option>
-                    <option>Service</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving
-                  ? 'Saving...'
-                  : editing
-                  ? 'Save Changes'
-                  : 'Add Category'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

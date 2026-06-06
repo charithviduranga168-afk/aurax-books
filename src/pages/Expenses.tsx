@@ -8,7 +8,7 @@ export default function Expenses() {
   const [categories, setCategories] = useState<string[]>([]);
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
@@ -76,7 +76,7 @@ export default function Expenses() {
       reference: '',
       notes: '',
     });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   function openEdit(e: any) {
@@ -90,7 +90,7 @@ export default function Expenses() {
       reference: e.reference || '',
       notes: e.notes || '',
     });
-    setShowModal(true);
+    setShowForm(true);
   }
 
   async function handleSave() {
@@ -125,7 +125,7 @@ export default function Expenses() {
       if (exp) exportPDF(exp);
     }
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     loadData();
   }
 
@@ -287,10 +287,141 @@ export default function Expenses() {
             This month: <strong>{fmt(monthlyTotal)}</strong>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          + Add Expense
+        <button
+          className="btn btn-primary"
+          onClick={() => (showForm ? setShowForm(false) : openAdd())}
+        >
+          {showForm ? 'Close' : '+ Add Expense'}
         </button>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div>
+              <div className="inline-panel-title">
+                {editing ? 'Edit Expense' : 'Add Expense'}
+              </div>
+              {!editing && (
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text2)',
+                    marginTop: '2px',
+                  }}
+                >
+                  Next: {generateExpenseNumber(expenses)}
+                </div>
+              )}
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Date *</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Category *</label>
+                <select
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm({ ...form, category: e.target.value })
+                  }
+                >
+                  <option value="">— Select Category —</option>
+                  {allCategories.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group full">
+                <label>Description</label>
+                <input
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  placeholder="e.g. Monthly office rent"
+                />
+              </div>
+              <div className="form-group">
+                <label>Amount (LKR) *</label>
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={(e) =>
+                    setForm({ ...form, amount: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Payment Method</label>
+                <select
+                  value={form.payment_method}
+                  onChange={(e) =>
+                    setForm({ ...form, payment_method: e.target.value })
+                  }
+                >
+                  <option>Cash</option>
+                  <option>Bank Transfer</option>
+                  <option>Cheque</option>
+                  <option>Online Payment</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Reference</label>
+                <input
+                  value={form.reference}
+                  onChange={(e) =>
+                    setForm({ ...form, reference: e.target.value })
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="form-group full">
+                <label>Notes</label>
+                <input
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value })
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? 'Saving...'
+                : editing
+                ? 'Save Changes'
+                : 'Add & Print'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Category summary */}
       {Object.keys(byCategory).length > 0 && (
@@ -449,139 +580,6 @@ export default function Expenses() {
         )}
       </div>
 
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal">
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">
-                  {editing ? 'Edit Expense' : 'Add Expense'}
-                </div>
-                {!editing && (
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: 'var(--text2)',
-                      marginTop: '2px',
-                    }}
-                  >
-                    Next: {generateExpenseNumber(expenses)}
-                  </div>
-                )}
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Date *</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Category *</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      setForm({ ...form, category: e.target.value })
-                    }
-                  >
-                    <option value="">— Select Category —</option>
-                    {allCategories.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label>Description</label>
-                  <input
-                    value={form.description}
-                    onChange={(e) =>
-                      setForm({ ...form, description: e.target.value })
-                    }
-                    placeholder="e.g. Monthly office rent"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Amount (LKR) *</label>
-                  <input
-                    type="number"
-                    value={form.amount}
-                    onChange={(e) =>
-                      setForm({ ...form, amount: e.target.value })
-                    }
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Payment Method</label>
-                  <select
-                    value={form.payment_method}
-                    onChange={(e) =>
-                      setForm({ ...form, payment_method: e.target.value })
-                    }
-                  >
-                    <option>Cash</option>
-                    <option>Bank Transfer</option>
-                    <option>Cheque</option>
-                    <option>Online Payment</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Reference</label>
-                  <input
-                    value={form.reference}
-                    onChange={(e) =>
-                      setForm({ ...form, reference: e.target.value })
-                    }
-                    placeholder="Optional"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label>Notes</label>
-                  <input
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving
-                  ? 'Saving...'
-                  : editing
-                  ? 'Save Changes'
-                  : 'Add & Print'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

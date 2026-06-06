@@ -17,7 +17,7 @@ export default function Bills() {
   const [products, setProducts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [showView, setShowView] = useState(false);
   const [viewBill, setViewBill] = useState<any>(null);
   const [viewLines, setViewLines] = useState<any[]>([]);
@@ -177,7 +177,7 @@ export default function Bills() {
     }
 
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     setForm({
       date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -360,10 +360,217 @@ export default function Bills() {
             </strong>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          + New Bill
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? 'Close' : '+ New Bill'}
         </button>
       </div>
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div>
+              <div className="inline-panel-title">New Purchase Bill</div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--text2)',
+                  marginTop: '2px',
+                }}
+              >
+                Next: {generateBillNumber(bills)}
+              </div>
+            </div>
+            <button
+              className="modal-close"
+              onClick={() => setShowForm(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid" style={{ marginBottom: '20px' }}>
+              <div className="form-group">
+                <label>Supplier *</label>
+                <select
+                  value={form.supplier_id}
+                  onChange={(e) =>
+                    setForm({ ...form, supplier_id: e.target.value })
+                  }
+                >
+                  <option value="">— Select Supplier —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Bill Date *</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Due Date</label>
+                <input
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) =>
+                    setForm({ ...form, due_date: e.target.value })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label>Tax %</label>
+                <input
+                  type="number"
+                  value={form.tax_rate}
+                  onChange={(e) =>
+                    setForm({ ...form, tax_rate: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="form-group full">
+                <label>Notes</label>
+                <input
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value })
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+            <div className="section-header">LINE ITEMS</div>
+            <div className="line-items">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40%' }}>Product</th>
+                    <th style={{ width: '12%' }}>Qty</th>
+                    <th style={{ width: '22%' }}>Unit Cost</th>
+                    <th style={{ width: '18%' }}>Total</th>
+                    <th style={{ width: '8%' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, i) => (
+                    <tr key={i}>
+                      <td>
+                        <select
+                          value={line.product_id}
+                          onChange={(e) =>
+                            updateLine(i, 'product_id', e.target.value)
+                          }
+                        >
+                          <option value="">— Select —</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={line.qty}
+                          min="1"
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              'qty',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={line.unit_cost}
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              'unit_cost',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                        />
+                      </td>
+                      <td
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--brand)',
+                          paddingLeft: '8px',
+                        }}
+                      >
+                        {fmt(line.line_total)}
+                      </td>
+                      <td>
+                        {lines.length > 1 && (
+                          <button
+                            onClick={() => removeLine(i)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--red)',
+                              cursor: 'pointer',
+                              fontSize: '16px',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="line-add-btn" onClick={addLine}>
+                + Add Line
+              </button>
+            </div>
+            <div className="totals-box">
+              <div className="total-row">
+                <span className="total-label">Subtotal:</span>
+                <span className="total-value">{fmt(subtotal)}</span>
+              </div>
+              {taxAmt > 0 && (
+                <div className="total-row">
+                  <span className="total-label">Tax:</span>
+                  <span className="total-value">{fmt(taxAmt)}</span>
+                </div>
+              )}
+              <div className="total-row total-final">
+                <span className="total-label">TOTAL:</span>
+                <span className="total-value">{fmt(total)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save & Print Bill'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-toolbar">
@@ -494,215 +701,6 @@ export default function Bills() {
       </div>
 
       {/* New Bill Modal */}
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal" style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">New Purchase Bill</div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--text2)',
-                    marginTop: '2px',
-                  }}
-                >
-                  Next: {generateBillNumber(bills)}
-                </div>
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid" style={{ marginBottom: '20px' }}>
-                <div className="form-group">
-                  <label>Supplier *</label>
-                  <select
-                    value={form.supplier_id}
-                    onChange={(e) =>
-                      setForm({ ...form, supplier_id: e.target.value })
-                    }
-                  >
-                    <option value="">— Select Supplier —</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Bill Date *</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Due Date</label>
-                  <input
-                    type="date"
-                    value={form.due_date}
-                    onChange={(e) =>
-                      setForm({ ...form, due_date: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Tax %</label>
-                  <input
-                    type="number"
-                    value={form.tax_rate}
-                    onChange={(e) =>
-                      setForm({ ...form, tax_rate: e.target.value })
-                    }
-                    placeholder="0"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label>Notes</label>
-                  <input
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-              <div className="section-header">LINE ITEMS</div>
-              <div className="line-items">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40%' }}>Product</th>
-                      <th style={{ width: '12%' }}>Qty</th>
-                      <th style={{ width: '22%' }}>Unit Cost</th>
-                      <th style={{ width: '18%' }}>Total</th>
-                      <th style={{ width: '8%' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, i) => (
-                      <tr key={i}>
-                        <td>
-                          <select
-                            value={line.product_id}
-                            onChange={(e) =>
-                              updateLine(i, 'product_id', e.target.value)
-                            }
-                          >
-                            <option value="">— Select —</option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            value={line.qty}
-                            min="1"
-                            onChange={(e) =>
-                              updateLine(
-                                i,
-                                'qty',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            value={line.unit_cost}
-                            onChange={(e) =>
-                              updateLine(
-                                i,
-                                'unit_cost',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                          />
-                        </td>
-                        <td
-                          style={{
-                            fontWeight: 600,
-                            color: 'var(--brand)',
-                            paddingLeft: '8px',
-                          }}
-                        >
-                          {fmt(line.line_total)}
-                        </td>
-                        <td>
-                          {lines.length > 1 && (
-                            <button
-                              onClick={() => removeLine(i)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--red)',
-                                cursor: 'pointer',
-                                fontSize: '16px',
-                              }}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <button className="line-add-btn" onClick={addLine}>
-                  + Add Line
-                </button>
-              </div>
-              <div className="totals-box">
-                <div className="total-row">
-                  <span className="total-label">Subtotal:</span>
-                  <span className="total-value">{fmt(subtotal)}</span>
-                </div>
-                {taxAmt > 0 && (
-                  <div className="total-row">
-                    <span className="total-label">Tax:</span>
-                    <span className="total-value">{fmt(taxAmt)}</span>
-                  </div>
-                )}
-                <div className="total-row total-final">
-                  <span className="total-label">TOTAL:</span>
-                  <span className="total-value">{fmt(total)}</span>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? 'Saving...' : 'Save & Print Bill'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* View Bill Modal */}
       {showView && viewBill && (

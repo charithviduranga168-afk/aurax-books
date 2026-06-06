@@ -24,7 +24,7 @@ export default function JournalEntries() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -107,7 +107,11 @@ export default function JournalEntries() {
       reference: '',
     });
     setLines([emptyLine(), emptyLine()]);
-    setShowModal(true);
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
   }
 
   async function handleSave() {
@@ -165,7 +169,7 @@ export default function JournalEntries() {
     }
 
     setSaving(false);
-    setShowModal(false);
+    setShowForm(false);
     loadData();
   }
 
@@ -351,10 +355,197 @@ export default function JournalEntries() {
           <div className="page-title">Journal Entries</div>
           <div className="page-sub">Double-entry bookkeeping records</div>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          + New Journal Entry
+        <button
+          className="btn btn-primary"
+          onClick={() => (showForm ? closeForm() : openAdd())}
+        >
+          {showForm ? 'Close' : '+ New Journal Entry'}
         </button>
       </div>
+
+      {showForm && (
+        <div className="inline-panel">
+          <div className="inline-panel-header">
+            <div>
+              <div className="inline-panel-title">New Journal Entry</div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'var(--text2)',
+                  marginTop: '2px',
+                }}
+              >
+                Next: {generateEntryNumber(entries)}
+              </div>
+            </div>
+            <button className="modal-close" onClick={closeForm}>
+              ×
+            </button>
+          </div>
+          <div className="inline-panel-body">
+            <div className="form-grid" style={{ marginBottom: '20px' }}>
+              <div className="form-group">
+                <label>Date *</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Reference</label>
+                <input
+                  value={form.reference}
+                  onChange={(e) =>
+                    setForm({ ...form, reference: e.target.value })
+                  }
+                  placeholder="Optional reference"
+                />
+              </div>
+              <div className="form-group full">
+                <label>Description *</label>
+                <input
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  placeholder="What is this entry for?"
+                />
+              </div>
+            </div>
+
+            <div className="section-header">LINE ITEMS</div>
+            <div className="line-items">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '28%' }}>Account</th>
+                    <th style={{ width: '28%' }}>Description</th>
+                    <th style={{ width: '17%' }}>Debit</th>
+                    <th style={{ width: '17%' }}>Credit</th>
+                    <th style={{ width: '10%' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((line, i) => (
+                    <tr key={i}>
+                      <td>
+                        <select
+                          value={line.account_id}
+                          onChange={(e) =>
+                            updateLine(i, 'account_id', e.target.value)
+                          }
+                        >
+                          <option value="">— Select Account —</option>
+                          {accounts.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.code} - {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          value={line.description}
+                          onChange={(e) =>
+                            updateLine(i, 'description', e.target.value)
+                          }
+                          placeholder="Optional"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={line.debit || ''}
+                          min="0"
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              'debit',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={line.credit || ''}
+                          min="0"
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              'credit',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td>
+                        {lines.length > 2 && (
+                          <button
+                            onClick={() => removeLine(i)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--red)',
+                              cursor: 'pointer',
+                              fontSize: '16px',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <button className="line-add-btn" onClick={addLine}>
+                + Add Line
+              </button>
+            </div>
+
+            <div className="totals-box">
+              <div className="total-row">
+                <span className="total-label">Total Debit:</span>
+                <span className="total-value">{fmt(totalDebit)}</span>
+              </div>
+              <div className="total-row">
+                <span className="total-label">Total Credit:</span>
+                <span className="total-value">{fmt(totalCredit)}</span>
+              </div>
+              <div className="total-row total-final">
+                <span className="total-label">
+                  {isBalanced ? '✓ Balanced' : '✗ Out of Balance'}
+                </span>
+                <span
+                  className="total-value"
+                  style={{ color: isBalanced ? 'var(--green)' : 'var(--red)' }}
+                >
+                  {isBalanced
+                    ? 'Debits = Credits'
+                    : `Difference: ${fmt(Math.abs(totalDebit - totalCredit))}`}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="inline-panel-footer">
+            <button className="btn btn-secondary" onClick={closeForm}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving || !isBalanced}
+            >
+              {saving ? 'Saving...' : 'Save Journal Entry'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="table-wrap">
         <div className="table-toolbar">
@@ -450,201 +641,6 @@ export default function JournalEntries() {
           </table>
         )}
       </div>
-
-      {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div className="modal" style={{ maxWidth: '800px' }}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">New Journal Entry</div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--text2)',
-                    marginTop: '2px',
-                  }}
-                >
-                  Next: {generateEntryNumber(entries)}
-                </div>
-              </div>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid" style={{ marginBottom: '20px' }}>
-                <div className="form-group">
-                  <label>Date *</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Reference</label>
-                  <input
-                    value={form.reference}
-                    onChange={(e) =>
-                      setForm({ ...form, reference: e.target.value })
-                    }
-                    placeholder="Optional reference"
-                  />
-                </div>
-                <div className="form-group full">
-                  <label>Description *</label>
-                  <input
-                    value={form.description}
-                    onChange={(e) =>
-                      setForm({ ...form, description: e.target.value })
-                    }
-                    placeholder="What is this entry for?"
-                  />
-                </div>
-              </div>
-
-              <div className="section-header">LINE ITEMS</div>
-              <div className="line-items">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '28%' }}>Account</th>
-                      <th style={{ width: '28%' }}>Description</th>
-                      <th style={{ width: '17%' }}>Debit</th>
-                      <th style={{ width: '17%' }}>Credit</th>
-                      <th style={{ width: '10%' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, i) => (
-                      <tr key={i}>
-                        <td>
-                          <select
-                            value={line.account_id}
-                            onChange={(e) =>
-                              updateLine(i, 'account_id', e.target.value)
-                            }
-                          >
-                            <option value="">— Select Account —</option>
-                            {accounts.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.code} - {a.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            value={line.description}
-                            onChange={(e) =>
-                              updateLine(i, 'description', e.target.value)
-                            }
-                            placeholder="Optional"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            value={line.debit || ''}
-                            min="0"
-                            onChange={(e) =>
-                              updateLine(
-                                i,
-                                'debit',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            value={line.credit || ''}
-                            min="0"
-                            onChange={(e) =>
-                              updateLine(
-                                i,
-                                'credit',
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td>
-                          {lines.length > 2 && (
-                            <button
-                              onClick={() => removeLine(i)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'var(--red)',
-                                cursor: 'pointer',
-                                fontSize: '16px',
-                              }}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <button className="line-add-btn" onClick={addLine}>
-                  + Add Line
-                </button>
-              </div>
-
-              <div className="totals-box">
-                <div className="total-row">
-                  <span className="total-label">Total Debit:</span>
-                  <span className="total-value">{fmt(totalDebit)}</span>
-                </div>
-                <div className="total-row">
-                  <span className="total-label">Total Credit:</span>
-                  <span className="total-value">{fmt(totalCredit)}</span>
-                </div>
-                <div className="total-row total-final">
-                  <span className="total-label">
-                    {isBalanced ? '✓ Balanced' : '✗ Out of Balance'}
-                  </span>
-                  <span
-                    className="total-value"
-                    style={{ color: isBalanced ? 'var(--green)' : 'var(--red)' }}
-                  >
-                    {isBalanced
-                      ? 'Debits = Credits'
-                      : `Difference: ${fmt(Math.abs(totalDebit - totalCredit))}`}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={saving || !isBalanced}
-              >
-                {saving ? 'Saving...' : 'Save Journal Entry'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
