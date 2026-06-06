@@ -4,8 +4,8 @@ import md5 from 'md5';
 
 const BASE_PRICE = 2000;
 const PER_USER_PRICE = 1000;
-const AURAX_PAYHERE_MERCHANT = import.meta.env.VITE_PAYHERE_MERCHANT_ID as string;
-const AURAX_PAYHERE_SECRET = import.meta.env.VITE_PAYHERE_SECRET as string;
+const AURAX_PAYHERE_MERCHANT = '1233250';
+const AURAX_PAYHERE_SECRET = 'MTIzNDU0OTgxNDMyNzE1OTQ2NTMzMTIzMTI2MDczMTA3MzAxNTM5Ng==';
 
 interface Member {
   id: string;
@@ -112,11 +112,6 @@ export default function Subscription() {
   }
 
   function payViaPayHere() {
-    if (!AURAX_PAYHERE_MERCHANT) {
-      showAlert('PayHere is not configured. Please check your environment setup.');
-      return;
-    }
-
     const orderId = `AURAX-SUB-${user.id.slice(0, 8)}-${Date.now()}`;
     const amount = monthlyTotal.toFixed(2);
     const currency = 'LKR';
