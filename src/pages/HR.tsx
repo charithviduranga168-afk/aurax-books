@@ -111,12 +111,15 @@ export default function HR() {
       bank_name: empForm.bank_name.trim(), bank_account: empForm.bank_account.trim(),
       status: empForm.status,
     };
+    let error;
     if (editEmpId) {
-      await supabase.from('employees').update(payload).eq('id', editEmpId);
+      ({ error } = await supabase.from('employees').update(payload).eq('id', editEmpId));
     } else {
-      await supabase.from('employees').insert(payload);
+      ({ error } = await supabase.from('employees').insert(payload));
     }
-    setSavingEmp(false); setShowEmpForm(false); setEditEmpId(null); setEmpForm(blankEmp);
+    setSavingEmp(false);
+    if (error) { showAlert('Failed to save: ' + error.message); return; }
+    setShowEmpForm(false); setEditEmpId(null); setEmpForm(blankEmp);
     loadAll();
   }
 
