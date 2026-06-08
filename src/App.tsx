@@ -26,6 +26,9 @@ import StockAdjustments from './pages/StockAdjustments';
 import BankReconciliation from './pages/BankReconciliation';
 import HR from './pages/HR';
 import Analytics from './pages/Analytics';
+import UserRoles from './pages/UserRoles';
+import QualityControl from './pages/QualityControl';
+import Projects from './pages/Projects';
 import './App.css';
 
 export type Page =
@@ -53,7 +56,10 @@ export type Page =
   | 'stockadjustments'
   | 'bankreconciliation'
   | 'hr'
-  | 'analytics';
+  | 'analytics'
+  | 'userroles'
+  | 'qc'
+  | 'projects';
 
 const menuGroups = [
   {
@@ -96,6 +102,13 @@ const menuGroups = [
   {
     label: 'HR & Payroll',
     items: [{ page: 'hr', label: 'HR & Payroll' }],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { page: 'qc', label: 'Quality Control' },
+      { page: 'projects', label: 'Projects' },
+    ],
   },
   {
     label: 'Reports',
@@ -161,7 +174,7 @@ export default function App() {
   const currentGroup = menuGroups.find((g) =>
     g.items.some((i) => i.page === page)
   );
-  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale' };
+  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale', userroles: 'Users & Roles' };
   const currentLabel =
     currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
 
@@ -258,6 +271,12 @@ export default function App() {
         return <HR />;
       case 'analytics':
         return <Analytics />;
+      case 'userroles':
+        return <UserRoles />;
+      case 'qc':
+        return <QualityControl />;
+      case 'projects':
+        return <Projects />;
       case 'subscription':
         return <Subscription />;
       default:
@@ -325,6 +344,9 @@ export default function App() {
 
         {/* Footer */}
         <div className="sidebar-footer">
+          <button className={`nav-item ${page === 'userroles' ? 'active' : ''}`} onClick={() => nav('userroles')}>
+            {sidebarOpen ? 'Users & Roles' : 'UR'}
+          </button>
           <button className={`nav-item ${page === 'subscription' ? 'active' : ''}`} onClick={() => nav('subscription')}>
             {sidebarOpen ? 'Subscription' : 'Su'}
           </button>
