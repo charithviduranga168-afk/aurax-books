@@ -86,7 +86,7 @@ export default function UserRoles() {
   async function load() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     const { data } = await supabase
       .from('team_members')
       .select('*')
@@ -124,7 +124,7 @@ export default function UserRoles() {
     if (!form.email.trim()) { showAlert('Email is required.'); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); showAlert('Session expired. Please refresh.'); return; }
 
     let error;
     if (editId) {
@@ -142,7 +142,12 @@ export default function UserRoles() {
       }));
     }
     setSaving(false);
-    if (error) { showAlert('Failed to save: ' + error.message); return; }
+    if (error) {
+      console.error('UserRoles save error:', error);
+      setShowForm(false);
+      showAlert('Failed to save: ' + error.message);
+      return;
+    }
     setShowForm(false);
     load();
   }
@@ -163,20 +168,6 @@ export default function UserRoles() {
 
   return (
     <div className="page-wrap">
-      {dialog && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 380 }}>
-            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              {dialog.type === 'confirm' && (
-                <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>
-              )}
-              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="page-header">
         <div>
           <h1 className="page-title">Users & Roles</h1>
@@ -266,6 +257,21 @@ export default function UserRoles() {
           </table>
         )}
       </div>
+
+      {/* Alert/Confirm dialog — rendered after form so it appears on top */}
+      {dialog && (
+        <div className="modal-backdrop">
+          <div className="modal-box" style={{ maxWidth: 380 }}>
+            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {dialog.type === 'confirm' && (
+                <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>
+              )}
+              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit modal */}
       {showForm && (
