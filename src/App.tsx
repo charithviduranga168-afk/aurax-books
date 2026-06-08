@@ -29,6 +29,7 @@ import Analytics from './pages/Analytics';
 import UserRoles from './pages/UserRoles';
 import QualityControl from './pages/QualityControl';
 import Projects from './pages/Projects';
+import CustomerPortal from './pages/CustomerPortal';
 import './App.css';
 
 export type Page =
@@ -130,6 +131,7 @@ const menuGroups = [
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
   const [page, setPage] = useState<Page>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openGroups, setOpenGroups] = useState<string[]>(
@@ -148,11 +150,39 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (!session?.user) setUserType('checking');
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading)
+  useEffect(() => {
+    if (!user) { setUserType('checking'); return; }
+    supabase.from('customer_portal_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setUserType('customer'); return; }
+        // check by email (first-time login — link user_id)
+        supabase.from('customer_portal_users')
+          .select('id')
+          .eq('invite_email', user.email)
+          .is('user_id', null)
+          .eq('is_active', true)
+          .maybeSingle()
+          .then(({ data: invite }) => {
+            if (invite) {
+              supabase.from('customer_portal_users').update({ user_id: user.id }).eq('id', invite.id).then();
+              setUserType('customer');
+            } else {
+              setUserType('admin');
+            }
+          });
+      });
+  }, [user]);
+
+  if (loading || (user && userType === 'checking'))
     return (
       <div className="splash">
         <div className="splash-logo">📒</div>
@@ -162,6 +192,8 @@ export default function App() {
     );
 
   if (!user) return <Login />;
+
+  if (userType === 'customer') return <CustomerPortal />;
 
   const nav = (p: Page) => setPage(p);
 

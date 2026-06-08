@@ -27,6 +27,10 @@ export default function Customers() {
     credit_limit: '0',
   });
   const [saving, setSaving] = useState(false);
+  const [portalDialog, setPortalDialog] = useState<{ customerId: string; customerName: string } | null>(null);
+  const [portalEmail, setPortalEmail] = useState('');
+  const [portalSaving, setPortalSaving] = useState(false);
+  const [portalMsg, setPortalMsg] = useState('');
 
   useEffect(() => {
     loadCustomers();
@@ -105,6 +109,29 @@ export default function Customers() {
     if (!confirm('Delete this customer?')) return;
     await supabase.from('customers').delete().eq('id', id);
     loadCustomers();
+  }
+
+  async function grantPortalAccess() {
+    if (!portalEmail.trim() || !portalDialog) return;
+    setPortalSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('customer_portal_users').upsert({
+      customer_id: portalDialog.customerId,
+      invite_email: portalEmail.trim().toLowerCase(),
+      admin_user_id: user.id,
+      is_active: true,
+      user_id: null,
+    }, { onConflict: 'invite_email' });
+    setPortalSaving(false);
+    if (error) { setPortalMsg('Error: ' + error.message); return; }
+    setPortalMsg('✓ Portal access granted. They can now sign up / log in with ' + portalEmail.trim());
+  }
+
+  function openPortalDialog(c: Customer) {
+    setPortalDialog({ customerId: c.id, customerName: c.name });
+    setPortalEmail(c.email || '');
+    setPortalMsg('');
   }
 
   const filtered = customers.filter(
@@ -304,6 +331,13 @@ export default function Customers() {
                         Edit
                       </button>
                       <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => openPortalDialog(c)}
+                        title="Grant Customer Portal Access"
+                      >
+                        Portal
+                      </button>
+                      <button
                         className="btn btn-danger btn-sm"
                         onClick={() => handleDelete(c.id)}
                       >
@@ -317,6 +351,37 @@ export default function Customers() {
           </table>
         )}
       </div>
+
+      {/* Portal Access Dialog */}
+      {portalDialog && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ width: 440, padding: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16 }}>Grant Customer Portal Access</h3>
+              <button className="btn btn-secondary btn-sm" onClick={() => setPortalDialog(null)}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
+              Customer: <strong>{portalDialog.customerName}</strong><br />
+              Enter the email address they will use to log in. They can sign up or sign in with this email to access their portal.
+            </p>
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label className="form-label">Login Email *</label>
+              <input className="form-input" type="email" value={portalEmail} onChange={e => setPortalEmail(e.target.value)} placeholder="customer@example.com" />
+            </div>
+            {portalMsg && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, background: portalMsg.startsWith('✓') ? '#dcfce7' : '#fee2e2', color: portalMsg.startsWith('✓') ? '#16a34a' : '#dc2626', fontSize: 13, marginBottom: 12 }}>
+                {portalMsg}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setPortalDialog(null)}>Close</button>
+              <button className="btn btn-primary" onClick={grantPortalAccess} disabled={portalSaving || !portalEmail.trim()}>
+                {portalSaving ? 'Saving...' : 'Grant Access'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
     </div>
