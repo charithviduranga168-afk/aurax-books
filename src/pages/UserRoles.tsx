@@ -127,23 +127,22 @@ export default function UserRoles() {
     if (!user) { setSaving(false); showAlert('Session expired. Please refresh.'); return; }
 
     let error;
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      role: form.role,
+      permissions: JSON.parse(JSON.stringify(form.permissions)),
+      is_active: true,
+    };
+    console.log('Saving member, user.id:', user.id, 'payload:', payload);
     if (editId) {
-      ({ error } = await supabase.from('team_members')
-        .update({ name: form.name.trim(), email: form.email.trim(), role: form.role, permissions: form.permissions })
-        .eq('id', editId));
+      ({ error } = await supabase.from('team_members').update(payload).eq('id', editId));
     } else {
-      ({ error } = await supabase.from('team_members').insert({
-        admin_user_id: user.id,
-        name: form.name.trim(),
-        email: form.email.trim(),
-        role: form.role,
-        permissions: form.permissions,
-        is_active: true,
-      }));
+      ({ error } = await supabase.from('team_members').insert({ ...payload, admin_user_id: user.id }));
     }
+    console.log('Save result, error:', error);
     setSaving(false);
     if (error) {
-      console.error('UserRoles save error:', error);
       setShowForm(false);
       showAlert('Failed to save: ' + error.message);
       return;
