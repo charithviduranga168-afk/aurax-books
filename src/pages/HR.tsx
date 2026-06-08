@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import jsPDF from 'jspdf';
 
 interface Employee {
   id: string; emp_number: string; first_name: string; last_name: string; nic: string;
@@ -214,6 +215,204 @@ export default function HR() {
   }
 
   const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+
+  function printPayslip(ps: Payslip, run: PayrollRun) {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = 210, ml = 15, mr = 195;
+    const c = (hex: string) => { const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16); return [r,g,b] as [number,number,number]; };
+    const fmtAmt = (n: number) => 'Rs. ' + (n||0).toLocaleString('en-LK',{minimumFractionDigits:2});
+
+    // Header band
+    doc.setFillColor(...c('#7c3aed'));
+    doc.rect(0, 0, W, 32, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(20);
+    doc.text('AURAX BOOKS', ml, 13);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text('Business Management Software', ml, 19);
+    doc.setFontSize(16);
+    doc.setFont('helvetica','bold');
+    doc.text('SALARY PAYSLIP', mr, 13, { align: 'right' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text(`${MONTHS[run.month - 1]} ${run.year}  ·  ${run.run_number}`, mr, 19, { align: 'right' });
+
+    // Sub-header: generated date
+    doc.setFillColor(...c('#ede9fe'));
+    doc.rect(0, 32, W, 8, 'F');
+    doc.setTextColor(...c('#5b21b6'));
+    doc.setFontSize(8);
+    doc.text(`Generated on ${new Date().toLocaleDateString('en-LK', { day:'2-digit', month:'long', year:'numeric' })}`, W/2, 37.5, { align: 'center' });
+
+    let y = 48;
+
+    // Employee info box
+    doc.setDrawColor(...c('#e5e7eb'));
+    doc.setFillColor(...c('#f9fafb'));
+    doc.roundedRect(ml, y, mr-ml, 32, 3, 3, 'FD');
+
+    doc.setTextColor(...c('#7c3aed'));
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text('EMPLOYEE INFORMATION', ml+4, y+6);
+
+    const empInfo = [
+      ['Employee Name', ps.employee_name],
+      ['Employee No.', ps.emp_number],
+      ['Department', ps.department || '—'],
+      ['Designation', ps.designation || '—'],
+    ];
+    const col1x = ml+4, col2x = ml+42, col3x = ml+95, col4x = ml+130;
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...c('#6b7280'));
+    doc.text(empInfo[0][0], col1x, y+13); doc.text(empInfo[1][0], col3x, y+13);
+    doc.text(empInfo[2][0], col1x, y+21); doc.text(empInfo[3][0], col3x, y+21);
+    doc.setTextColor(...c('#111827'));
+    doc.setFont('helvetica','bold');
+    doc.text(empInfo[0][1], col2x, y+13); doc.text(empInfo[1][1], col4x, y+13);
+    doc.text(empInfo[2][1], col2x, y+21); doc.text(empInfo[3][1], col4x, y+21);
+
+    y += 38;
+
+    // Two-column: Earnings | Deductions
+    const colW = (mr - ml - 6) / 2;
+    const col1 = ml, col2 = ml + colW + 6;
+
+    // Earnings header
+    doc.setFillColor(...c('#7c3aed'));
+    doc.roundedRect(col1, y, colW, 7, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text('EARNINGS', col1 + colW/2, y+4.8, { align: 'center' });
+
+    // Deductions header
+    doc.setFillColor(...c('#dc2626'));
+    doc.roundedRect(col2, y, colW, 7, 2, 2, 'F');
+    doc.text('DEDUCTIONS', col2 + colW/2, y+4.8, { align: 'center' });
+
+    y += 9;
+    const rowH = 7;
+
+    const earnings = [
+      ['Basic Salary', ps.basic_salary],
+      ['Transport Allowance', ps.transport_allowance || 0],
+      ['Meal Allowance', ps.meal_allowance || 0],
+      ['Other Allowance', ps.other_allowance || 0],
+    ];
+    const deductions = [
+      ['EPF (Employee 8%)', ps.epf_employee],
+    ];
+
+    // Draw earning rows
+    earnings.forEach((row, i) => {
+      doc.setFillColor(i % 2 === 0 ? 255 : 250, i % 2 === 0 ? 255 : 247, i % 2 === 0 ? 255 : 255);
+      doc.rect(col1, y + i*rowH, colW, rowH, 'F');
+      doc.setDrawColor(...c('#e5e7eb'));
+      doc.rect(col1, y + i*rowH, colW, rowH, 'D');
+      doc.setTextColor(...c('#374151'));
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.text(row[0] as string, col1+3, y + i*rowH + 4.8);
+      doc.setFont('helvetica','bold');
+      doc.text(fmtAmt(row[1] as number), col1 + colW - 3, y + i*rowH + 4.8, { align: 'right' });
+    });
+
+    // Draw deduction rows
+    deductions.forEach((row, i) => {
+      doc.setFillColor(i % 2 === 0 ? 255 : 250, i % 2 === 0 ? 243 : 242, i % 2 === 0 ? 243 : 242);
+      doc.rect(col2, y + i*rowH, colW, rowH, 'F');
+      doc.setDrawColor(...c('#e5e7eb'));
+      doc.rect(col2, y + i*rowH, colW, rowH, 'D');
+      doc.setTextColor(...c('#374151'));
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8.5);
+      doc.text(row[0] as string, col2+3, y + i*rowH + 4.8);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(...c('#dc2626'));
+      doc.text('- ' + fmtAmt(row[1] as number), col2 + colW - 3, y + i*rowH + 4.8, { align: 'right' });
+    });
+
+    const maxRows = Math.max(earnings.length, deductions.length);
+    y += maxRows * rowH + 2;
+
+    // Subtotals row
+    doc.setFillColor(...c('#ede9fe'));
+    doc.rect(col1, y, colW, 8, 'F');
+    doc.setTextColor(...c('#5b21b6'));
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8.5);
+    doc.text('Gross Salary', col1+3, y+5.3);
+    doc.text(fmtAmt(ps.gross_salary), col1+colW-3, y+5.3, { align: 'right' });
+
+    doc.setFillColor(...c('#fee2e2'));
+    doc.rect(col2, y, colW, 8, 'F');
+    doc.setTextColor(...c('#991b1b'));
+    doc.text('Total Deductions', col2+3, y+5.3);
+    doc.text('- ' + fmtAmt(ps.epf_employee), col2+colW-3, y+5.3, { align: 'right' });
+
+    y += 14;
+
+    // Net Salary highlight box
+    doc.setFillColor(...c('#7c3aed'));
+    doc.roundedRect(ml, y, mr-ml, 18, 4, 4, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('NET SALARY (TAKE HOME)', ml+6, y+6.5);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text(fmtAmt(ps.net_salary), mr-6, y+13, { align: 'right' });
+
+    y += 24;
+
+    // Employer contributions (info only)
+    doc.setFillColor(...c('#fef3c7'));
+    doc.setDrawColor(...c('#f59e0b'));
+    doc.roundedRect(ml, y, mr-ml, 22, 3, 3, 'FD');
+    doc.setTextColor(...c('#92400e'));
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.text('EMPLOYER CONTRIBUTIONS  (not deducted from your salary)', ml+4, y+6);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...c('#374151'));
+    const empContr = [
+      `EPF – Employer (12%):  ${fmtAmt(ps.epf_employer)}`,
+      `ETF – Employer (3%):   ${fmtAmt(ps.etf)}`,
+      `Total Employer Cost:   ${fmtAmt(ps.gross_salary + ps.epf_employer + ps.etf)}`,
+    ];
+    empContr.forEach((line, i) => doc.text(line, ml+4 + (i < 2 ? 0 : 0), y+12 + i*5));
+
+    y += 30;
+
+    // Divider
+    doc.setDrawColor(...c('#e5e7eb'));
+    doc.line(ml, y, mr, y);
+    y += 6;
+
+    // Signature area
+    doc.setTextColor(...c('#6b7280'));
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.text('Authorized Signature', ml+20, y+18);
+    doc.line(ml, y+20, ml+55, y+20);
+    doc.text('Employee Signature', mr-55, y+18);
+    doc.line(mr-55, y+20, mr, y+20);
+
+    // Footer
+    doc.setFillColor(...c('#f3f4f6'));
+    doc.rect(0, 283, W, 14, 'F');
+    doc.setTextColor(...c('#9ca3af'));
+    doc.setFontSize(7.5);
+    doc.text('This is a computer-generated payslip and does not require a physical signature.', W/2, 290, { align: 'center' });
+    doc.text('AURAX BOOKS  ·  Confidential', W/2, 294, { align: 'center' });
+
+    doc.save(`Payslip_${ps.emp_number}_${MONTHS[run.month-1]}_${run.year}.pdf`);
+  }
   const tabStyle = (i: number): React.CSSProperties => ({
     padding: '8px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px',
     fontWeight: activeTab === i ? 700 : 500, background: activeTab === i ? 'var(--brand)' : 'transparent',
@@ -419,10 +618,15 @@ export default function HR() {
                     </div>
 
                     <div className="table-wrap">
-                      <div className="table-toolbar"><h3>Payslips — {MONTHS[selectedRunData.month - 1]} {selectedRunData.year}</h3></div>
+                      <div className="table-toolbar">
+                        <h3>Payslips — {MONTHS[selectedRunData.month - 1]} {selectedRunData.year}</h3>
+                        <button className="btn btn-secondary" onClick={() => payslips.forEach(ps => printPayslip(ps, selectedRunData))}>
+                          🖨 Print All
+                        </button>
+                      </div>
                       <table>
                         <thead>
-                          <tr><th>Emp #</th><th>Name</th><th>Department</th><th style={{ textAlign: 'right' }}>Basic</th><th style={{ textAlign: 'right' }}>Allowances</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>EPF (8%)</th><th style={{ textAlign: 'right' }}>Net Salary</th></tr>
+                          <tr><th>Emp #</th><th>Name</th><th>Department</th><th style={{ textAlign: 'right' }}>Basic</th><th style={{ textAlign: 'right' }}>Allowances</th><th style={{ textAlign: 'right' }}>Gross</th><th style={{ textAlign: 'right' }}>EPF (8%)</th><th style={{ textAlign: 'right' }}>Net Salary</th><th></th></tr>
                         </thead>
                         <tbody>
                           {payslips.map(ps => (
@@ -435,6 +639,9 @@ export default function HR() {
                               <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(ps.gross_salary)}</td>
                               <td style={{ textAlign: 'right', color: '#dc2626', fontSize: 13 }}>-{fmt(ps.epf_employee)}</td>
                               <td style={{ textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>{fmt(ps.net_salary)}</td>
+                              <td>
+                                <button className="btn btn-secondary btn-sm" onClick={() => printPayslip(ps, selectedRunData)}>🖨 Print</button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
