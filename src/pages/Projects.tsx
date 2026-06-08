@@ -450,8 +450,8 @@ export default function Projects() {
 
       {/* Project form modal */}
       {showProjectForm && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 580, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: 580, maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>{editProjectId ? 'Edit Project' : 'New Project'}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowProjectForm(false)}>✕</button>
@@ -513,8 +513,8 @@ export default function Projects() {
 
       {/* Task form modal */}
       {showTaskForm && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>{editTaskId ? 'Edit Task' : 'New Task'}</h2>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowTaskForm(false)}>✕</button>
@@ -568,8 +568,8 @@ export default function Projects() {
       )}
 
       {dialog && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 380 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: 380 }}>
             <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
