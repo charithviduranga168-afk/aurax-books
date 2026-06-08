@@ -24,6 +24,8 @@ import Subscription from './pages/Subscription';
 import PointOfSale from './pages/PointOfSale';
 import StockAdjustments from './pages/StockAdjustments';
 import BankReconciliation from './pages/BankReconciliation';
+import HR from './pages/HR';
+import Analytics from './pages/Analytics';
 import './App.css';
 
 export type Page =
@@ -49,7 +51,9 @@ export type Page =
   | 'subscription'
   | 'pos'
   | 'stockadjustments'
-  | 'bankreconciliation';
+  | 'bankreconciliation'
+  | 'hr'
+  | 'analytics';
 
 const menuGroups = [
   {
@@ -90,8 +94,15 @@ const menuGroups = [
     ],
   },
   {
+    label: 'HR & Payroll',
+    items: [{ page: 'hr', label: 'HR & Payroll' }],
+  },
+  {
     label: 'Reports',
-    items: [{ page: 'reports', label: 'Financial Reports' }],
+    items: [
+      { page: 'reports', label: 'Financial Reports' },
+      { page: 'analytics', label: 'Analytics' },
+    ],
   },
   {
     label: 'Manufacturing',
@@ -243,6 +254,10 @@ export default function App() {
         return <StockAdjustments />;
       case 'bankreconciliation':
         return <BankReconciliation />;
+      case 'hr':
+        return <HR />;
+      case 'analytics':
+        return <Analytics />;
       case 'subscription':
         return <Subscription />;
       default:
