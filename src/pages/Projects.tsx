@@ -121,7 +121,7 @@ export default function Projects() {
     if (!projectForm.name.trim()) { showAlert('Project name is required.'); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); showAlert('Session expired. Please refresh.'); return; }
 
     const cust = customers.find(c => c.id === projectForm.client_id);
     const payload = {
@@ -146,8 +146,12 @@ export default function Projects() {
       ({ error } = await supabase.from('projects').insert({ ...payload, project_number }));
     }
     setSaving(false);
-    if (error) { showAlert('Failed to save: ' + error.message); return; }
     setShowProjectForm(false);
+    if (error) {
+      console.error('Project save error:', error);
+      showAlert('Failed to save: ' + error.message);
+      return;
+    }
     loadAll();
   }
 
@@ -156,7 +160,7 @@ export default function Projects() {
     if (!selectedProjectId) { showAlert('No project selected.'); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); showAlert('Session expired. Please refresh.'); return; }
 
     const payload = {
       project_id: selectedProjectId,
@@ -179,8 +183,12 @@ export default function Projects() {
       ({ error } = await supabase.from('project_tasks').insert({ ...payload, task_number }));
     }
     setSaving(false);
-    if (error) { showAlert('Failed to save: ' + error.message); return; }
     setShowTaskForm(false);
+    if (error) {
+      console.error('Task save error:', error);
+      showAlert('Failed to save: ' + error.message);
+      return;
+    }
     loadAll();
   }
 
@@ -223,18 +231,6 @@ export default function Projects() {
 
   return (
     <div className="page-wrap">
-      {dialog && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 380 }}>
-            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
-              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="page-header">
         <div>
           <h1 className="page-title">Projects</h1>
@@ -566,6 +562,18 @@ export default function Projects() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
               <button className="btn btn-secondary" onClick={() => setShowTaskForm(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={saveTask} disabled={saving}>{saving ? 'Saving...' : editTaskId ? 'Save Changes' : 'Create Task'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialog && (
+        <div className="modal-backdrop">
+          <div className="modal-box" style={{ maxWidth: 380 }}>
+            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
+              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
             </div>
           </div>
         </div>

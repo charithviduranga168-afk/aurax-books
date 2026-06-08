@@ -136,7 +136,7 @@ export default function QualityControl() {
 
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSaving(false); showAlert('Session expired. Please refresh.'); return; }
 
     const status = form.status !== 'pending' ? form.status : deriveStatus(form);
     const payload = {
@@ -164,8 +164,12 @@ export default function QualityControl() {
       ({ error } = await supabase.from('qc_inspections').insert({ ...payload, inspection_number }));
     }
     setSaving(false);
-    if (error) { showAlert('Failed to save: ' + error.message); return; }
     setShowForm(false);
+    if (error) {
+      console.error('QC save error:', error);
+      showAlert('Failed to save: ' + error.message);
+      return;
+    }
     loadAll();
   }
 
@@ -210,18 +214,6 @@ export default function QualityControl() {
 
   return (
     <div className="page-wrap">
-      {dialog && (
-        <div className="modal-backdrop">
-          <div className="modal-box" style={{ maxWidth: 380 }}>
-            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
-              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="page-header">
         <div>
           <h1 className="page-title">Quality Control</h1>
@@ -392,6 +384,18 @@ export default function QualityControl() {
               </table>
             );
           })()}
+        </div>
+      )}
+
+      {dialog && (
+        <div className="modal-backdrop">
+          <div className="modal-box" style={{ maxWidth: 380 }}>
+            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
+              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
+            </div>
+          </div>
         </div>
       )}
 
