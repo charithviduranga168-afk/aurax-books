@@ -30,6 +30,8 @@ import UserRoles from './pages/UserRoles';
 import QualityControl from './pages/QualityControl';
 import Projects from './pages/Projects';
 import CustomerPortal from './pages/CustomerPortal';
+import ECommerce from './pages/ECommerce';
+import PublicStore from './pages/PublicStore';
 import './App.css';
 
 export type Page =
@@ -60,7 +62,8 @@ export type Page =
   | 'analytics'
   | 'userroles'
   | 'qc'
-  | 'projects';
+  | 'projects'
+  | 'ecommerce';
 
 const menuGroups = [
   {
@@ -70,6 +73,7 @@ const menuGroups = [
       { page: 'salesorders', label: 'Sales Orders' },
       { page: 'invoices', label: 'Invoices' },
       { page: 'receipts', label: 'Receipts' },
+      { page: 'ecommerce', label: 'E-Commerce' },
     ],
   },
   {
@@ -129,6 +133,13 @@ const menuGroups = [
 ];
 
 export default function App() {
+  // Public store — no auth required
+  const urlParams = new URLSearchParams(window.location.search);
+  const storeParam = urlParams.get('store');
+  if (storeParam) {
+    return <PublicStore adminUserId={storeParam} confirmedOrderId={urlParams.get('order')} />;
+  }
+
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
@@ -206,7 +217,7 @@ export default function App() {
   const currentGroup = menuGroups.find((g) =>
     g.items.some((i) => i.page === page)
   );
-  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale', userroles: 'Users & Roles' };
+  const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale', userroles: 'Users & Roles', ecommerce: 'E-Commerce' };
   const currentLabel =
     currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
 
@@ -309,6 +320,8 @@ export default function App() {
         return <QualityControl />;
       case 'projects':
         return <Projects />;
+      case 'ecommerce':
+        return <ECommerce />;
       case 'subscription':
         return <Subscription />;
       default:
