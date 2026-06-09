@@ -133,13 +133,6 @@ const menuGroups = [
 ];
 
 export default function App() {
-  // Public store — no auth required
-  const urlParams = new URLSearchParams(window.location.search);
-  const storeParam = urlParams.get('store');
-  if (storeParam) {
-    return <PublicStore adminUserId={storeParam} confirmedOrderId={urlParams.get('order')} />;
-  }
-
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
@@ -151,6 +144,10 @@ export default function App() {
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
   const [invoicePrefill, setInvoicePrefill] = useState<{ so: any; lines: any[] } | null>(null);
+
+  // URL params — checked after hooks, before auth renders
+  const urlParams = new URLSearchParams(window.location.search);
+  const storeParam = urlParams.get('store');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -201,6 +198,8 @@ export default function App() {
         <div className="splash-sub">Loading...</div>
       </div>
     );
+
+  if (storeParam) return <PublicStore adminUserId={storeParam} confirmedOrderId={urlParams.get('order')} />;
 
   if (!user) return <Login />;
 
