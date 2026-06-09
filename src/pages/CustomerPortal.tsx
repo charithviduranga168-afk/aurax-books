@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+import md5 from 'md5';
 import { supabase } from '../supabase';
+
+const PAYHERE_MERCHANT = '1233250';
+const PAYHERE_SECRET = 'MTIzNDU0OTgxNDMyNzE1OTQ2NTMzMTIzMTI2MDczMTA3MzAxNTM5Ng==';
 
 interface PortalCustomer {
   id: string;
@@ -104,6 +108,56 @@ export default function CustomerPortal() {
   const totalPaid = receipts.reduce((s, r) => s + (r.amount || 0), 0);
   const overdueInvoices = invoices.filter(i => i.due_date && new Date(i.due_date) < new Date() && i.status !== 'paid' && i.status !== 'cancelled');
 
+  function submitPayHere(amountNum: number, orderId: string, itemsDesc: string) {
+    if (!customer) return;
+    const amount = amountNum.toFixed(2);
+    const currency = 'LKR';
+    const secretHash = md5(PAYHERE_SECRET).toUpperCase();
+    const hash = md5(PAYHERE_MERCHANT + orderId + amount + currency + secretHash).toUpperCase();
+
+    const nameParts = customer.name.trim().split(' ');
+    const fields: Record<string, string> = {
+      merchant_id: PAYHERE_MERCHANT,
+      return_url: window.location.origin + window.location.pathname,
+      cancel_url: window.location.origin + window.location.pathname,
+      notify_url: '',
+      order_id: orderId,
+      items: itemsDesc,
+      currency,
+      amount,
+      first_name: nameParts[0] || customer.name,
+      last_name: nameParts.slice(1).join(' ') || '',
+      email: customer.email || '',
+      phone: customer.phone || '0000000000',
+      address: customer.address || 'Sri Lanka',
+      city: 'Colombo',
+      country: 'Sri Lanka',
+      hash,
+    };
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://www.payhere.lk/pay/checkout';
+    form.style.display = 'none';
+    for (const [k, v] of Object.entries(fields)) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = k; inp.value = v;
+      form.appendChild(inp);
+    }
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function payInvoice(inv: PortalInvoice) {
+    const orderId = `PORTAL-INV-${inv.id.slice(0, 8)}-${Date.now()}`;
+    submitPayHere(inv.total, orderId, `Invoice ${inv.invoice_number}`);
+  }
+
+  function payAllOutstanding() {
+    const orderId = `PORTAL-BAL-${customer!.id.slice(0, 8)}-${Date.now()}`;
+    submitPayHere(outstanding, orderId, `Outstanding Balance — ${customer!.name}`);
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: '#f8f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -145,6 +199,21 @@ export default function CustomerPortal() {
       </div>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
+
+        {/* Pay outstanding banner */}
+        {outstanding > 0 && (
+          <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', borderRadius: 12, padding: '20px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 4 }}>Total Outstanding Balance</div>
+              <div style={{ color: 'white', fontSize: 28, fontWeight: 900 }}>{fmt(outstanding)}</div>
+            </div>
+            <button onClick={payAllOutstanding}
+              style={{ background: 'white', color: '#7c3aed', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 800, fontSize: 15, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <img src="https://www.payhere.lk/downloads/images/payhere_short_banner.png" alt="PayHere" style={{ height: 20 }} />
+              Pay All Outstanding
+            </button>
+          </div>
+        )}
 
         {/* Overdue alert */}
         {overdueInvoices.length > 0 && (
@@ -196,7 +265,7 @@ export default function CustomerPortal() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#fafafa' }}>
-                    {['Invoice #', 'Date', 'Due Date', 'Amount', 'Status'].map(h => (
+                    {['Invoice #', 'Date', 'Due Date', 'Amount', 'Status', ''].map(h => (
                       <th key={h} style={{ padding: '10px 20px', textAlign: h === 'Amount' ? 'right' : 'left', fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f3f4f6' }}>{h}</th>
                     ))}
                   </tr>
@@ -213,6 +282,15 @@ export default function CustomerPortal() {
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, fontSize: 15 }}>{fmt(inv.total)}</td>
                         <td style={{ padding: '14px 20px' }}>{statusBadge(inv.status)}</td>
+                        <td style={{ padding: '14px 20px' }}>
+                          {inv.status !== 'paid' && inv.status !== 'cancelled' && (
+                            <button onClick={() => payInvoice(inv)}
+                              style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              Pay Now
+                            </button>
+                          )}
+                          {inv.status === 'paid' && <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✓ Paid</span>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -221,7 +299,7 @@ export default function CustomerPortal() {
                   <tr style={{ background: '#fafafa', borderTop: '2px solid #f3f4f6' }}>
                     <td colSpan={3} style={{ padding: '12px 20px', fontWeight: 700, fontSize: 14 }}>Outstanding Total</td>
                     <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: 800, fontSize: 16, color: outstanding > 0 ? '#dc2626' : '#16a34a' }}>{fmt(outstanding)}</td>
-                    <td />
+                    <td /><td />
                   </tr>
                 </tfoot>
               </table>
