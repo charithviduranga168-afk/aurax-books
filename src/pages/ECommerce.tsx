@@ -12,8 +12,8 @@ interface EcomSettings {
 interface Product {
   id: string;
   name: string;
-  sku: string;
-  selling_price: number;
+  product_code: string;
+  sales_price: number;
 }
 
 interface EcomProduct {
@@ -99,7 +99,7 @@ export default function ECommerce() {
 
     const [{ data: st }, { data: prods }, { data: eprods }, { data: ords }] = await Promise.all([
       supabase.from('ecommerce_settings').select('*').eq('admin_user_id', user.id).maybeSingle(),
-      supabase.from('products').select('id,name,sku,selling_price').eq('user_id', user.id).order('name'),
+      supabase.from('products').select('id,name,product_code,sales_price').eq('user_id', user.id).order('name'),
       supabase.from('ecommerce_products').select('*').eq('admin_user_id', user.id).order('sort_order'),
       supabase.from('store_orders').select('*').eq('admin_user_id', user.id).order('created_at', { ascending: false }),
     ]);
@@ -151,18 +151,20 @@ export default function ECommerce() {
     const payload = {
       admin_user_id: user.id,
       product_id: productForm.product_id,
-      product_name: selectedProduct?.name || '',
+      product_name: selectedProduct?.name ?? '',
       online_price: parseFloat(productForm.online_price) || 0,
       description: productForm.description.trim(),
       image_url: productForm.image_url.trim(),
       is_active: true,
     };
+    let error;
     if (editEcomId) {
-      await supabase.from('ecommerce_products').update(payload).eq('id', editEcomId);
+      ({ error } = await supabase.from('ecommerce_products').update(payload).eq('id', editEcomId));
     } else {
-      await supabase.from('ecommerce_products').insert(payload);
+      ({ error } = await supabase.from('ecommerce_products').insert(payload));
     }
     setSavingProduct(false);
+    if (error) { alert('Failed to save: ' + error.message); return; }
     setShowProductDialog(false);
     loadAll();
   }
@@ -479,11 +481,11 @@ export default function ECommerce() {
                   <label className="form-label">Product *</label>
                   <select className="form-input" value={productForm.product_id} onChange={e => {
                     const p = products.find(x => x.id === e.target.value);
-                    setProductForm(f => ({ ...f, product_id: e.target.value, online_price: p ? String(p.selling_price) : '' }));
+                    setProductForm(f => ({ ...f, product_id: e.target.value, online_price: p ? String(p.sales_price) : '' }));
                   }}>
                     <option value="">-- Select a product --</option>
                     {(editEcomId ? products : unlistedProducts).map(p => (
-                      <option key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''}</option>
+                      <option key={p.id} value={p.id}>{p.name} {p.product_code ? `(${p.product_code})` : ''}</option>
                     ))}
                   </select>
                 </div>
