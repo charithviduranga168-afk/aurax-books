@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import md5 from 'md5';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabase';
 
 const PAYHERE_MERCHANT = '1233250';
@@ -40,6 +42,40 @@ interface PortalReceipt {
   payment_method: string;
 }
 
+interface InvoiceLine {
+  id: string;
+  product_name: string;
+  qty: number;
+  unit_price: number;
+  discount_pct: number;
+  line_total: number;
+}
+
+interface FullInvoice {
+  id: string;
+  invoice_number: string;
+  date: string;
+  due_date: string;
+  customer_name: string;
+  subtotal: number;
+  tax_amount: number;
+  discount: number;
+  total: number;
+  paid_amount: number;
+  balance: number;
+  status: string;
+  notes: string;
+  lines: InvoiceLine[];
+}
+
+interface CompanySettings {
+  company_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  tax_reg: string;
+}
+
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   draft:     { bg: '#f3f4f6', color: '#374151' },
   sent:      { bg: '#dbeafe', color: '#1d4ed8' },
@@ -73,6 +109,11 @@ export default function CustomerPortal() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [fullInvoice, setFullInvoice] = useState<FullInvoice | null>(null);
+  const [company, setCompany] = useState<CompanySettings | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
@@ -102,6 +143,208 @@ export default function CustomerPortal() {
     setOrders(ord || []);
     setReceipts(rec || []);
     setLoading(false);
+  }
+
+  async function openInvoice(invId: string) {
+    setSelectedInvoiceId(invId);
+    setFullInvoice(null);
+    setDetailLoading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setDetailLoading(false); return; }
+
+    const { data: cpu } = await supabase
+      .from('customer_portal_users')
+      .select('admin_user_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    const [{ data: inv }, { data: lines }, { data: comp }] = await Promise.all([
+      supabase.from('invoices').select('*').eq('id', invId).single(),
+      supabase.from('invoice_lines').select('id,product_name,qty,unit_price,discount_pct,line_total').eq('invoice_id', invId),
+      cpu
+        ? supabase.from('company_settings').select('company_name,address,phone,email,tax_reg').eq('user_id', cpu.admin_user_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    if (inv) setFullInvoice({ ...inv, lines: lines || [] });
+    if (comp) setCompany(comp);
+    setDetailLoading(false);
+  }
+
+  function downloadInvoicePDF() {
+    if (!fullInvoice || !customer) return;
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+
+    // Purple header band
+    doc.setFillColor(124, 58, 237);
+    doc.rect(0, 0, pw, 42, 'F');
+
+    // Company name (left)
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text(company?.company_name || 'AURAX BOOKS', 14, 17);
+
+    // "TAX INVOICE" label below
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(220, 200, 255);
+    doc.text('TAX INVOICE', 14, 25);
+
+    // Company details (right)
+    doc.setFontSize(8);
+    doc.setTextColor(230, 220, 255);
+    let ch = 11;
+    if (company?.address) { doc.text(company.address, pw - 14, ch, { align: 'right' }); ch += 5; }
+    if (company?.phone) { doc.text('Tel: ' + company.phone, pw - 14, ch, { align: 'right' }); ch += 5; }
+    if (company?.email) { doc.text(company.email, pw - 14, ch, { align: 'right' }); ch += 5; }
+    if (company?.tax_reg) { doc.text('Tax Reg: ' + company.tax_reg, pw - 14, ch, { align: 'right' }); }
+
+    let y = 54;
+
+    // Two-column info section
+    // Left: Invoice details
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('INVOICE DETAILS', 14, y);
+
+    // Right: Billed To
+    doc.text('BILLED TO', pw / 2 + 4, y);
+
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50, 50, 50);
+
+    const leftItems: [string, string][] = [
+      ['Invoice No:', fullInvoice.invoice_number],
+      ['Date:', fullInvoice.date || '—'],
+      ['Due Date:', fullInvoice.due_date || '—'],
+      ['Status:', fullInvoice.status.toUpperCase()],
+    ];
+
+    let ly = y;
+    leftItems.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text(label, 14, ly);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, 42, ly);
+      ly += 5.5;
+    });
+
+    // Right column - customer info
+    let ry = y;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(customer.name, pw / 2 + 4, ry);
+    ry += 5.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    if (customer.email) { doc.text(customer.email, pw / 2 + 4, ry); ry += 5; }
+    if (customer.phone) { doc.text(customer.phone, pw / 2 + 4, ry); ry += 5; }
+    if (customer.address) {
+      const addrLines = doc.splitTextToSize(customer.address, 80);
+      addrLines.forEach((l: string) => { doc.text(l, pw / 2 + 4, ry); ry += 5; });
+    }
+
+    // Divider line
+    y = Math.max(ly, ry) + 6;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, y, pw - 14, y);
+    y += 8;
+
+    // Line items table
+    const tableRows = fullInvoice.lines.map(l => [
+      l.product_name,
+      String(l.qty),
+      fmt(l.unit_price),
+      l.discount_pct ? l.discount_pct + '%' : '—',
+      fmt(l.line_total),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Description', 'Qty', 'Unit Price', 'Discount', 'Total']],
+      body: tableRows.length > 0 ? tableRows : [['No items', '', '', '', '']],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [124, 58, 237],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        halign: 'left',
+      },
+      bodyStyles: { fontSize: 8.5, textColor: [50, 50, 50] },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { halign: 'center', cellWidth: 18 },
+        2: { halign: 'right', cellWidth: 32 },
+        3: { halign: 'center', cellWidth: 22 },
+        4: { halign: 'right', cellWidth: 32 },
+      },
+      margin: { left: 14, right: 14 },
+      styles: { cellPadding: 3 },
+    });
+
+    const tableEndY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Totals block
+    const totX1 = pw - 80;
+    const totX2 = pw - 14;
+    let ty = tableEndY;
+
+    const totalsRows: [string, string][] = [
+      ['Subtotal', fmt(fullInvoice.subtotal || 0)],
+    ];
+    if ((fullInvoice.tax_amount || 0) > 0) totalsRows.push(['Tax', fmt(fullInvoice.tax_amount)]);
+    if ((fullInvoice.discount || 0) > 0) totalsRows.push(['Discount', '- ' + fmt(fullInvoice.discount)]);
+
+    doc.setFontSize(8.5);
+    totalsRows.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(label, totX1, ty);
+      doc.text(value, totX2, ty, { align: 'right' });
+      ty += 5.5;
+    });
+
+    // Total band
+    doc.setFillColor(124, 58, 237);
+    doc.roundedRect(totX1 - 4, ty - 1, totX2 - totX1 + 4 + 4, 9, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL', totX1, ty + 6);
+    doc.text(fmt(fullInvoice.total || 0), totX2, ty + 6, { align: 'right' });
+    ty += 16;
+
+    // Notes
+    if (fullInvoice.notes) {
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text('Notes:', 14, ty);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      const noteLines = doc.splitTextToSize(fullInvoice.notes, pw - 28);
+      doc.text(noteLines, 14, ty + 5);
+    }
+
+    // Footer
+    doc.setFillColor(124, 58, 237);
+    doc.rect(0, ph - 14, pw, 14, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(220, 200, 255);
+    doc.text('Thank you for your business!', pw / 2, ph - 5, { align: 'center' });
+
+    doc.save(`Invoice-${fullInvoice.invoice_number}.pdf`);
   }
 
   const outstanding = invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled').reduce((s, i) => s + (i.total || 0), 0);
@@ -148,7 +391,7 @@ export default function CustomerPortal() {
     form.submit();
   }
 
-  function payInvoice(inv: PortalInvoice) {
+  function payInvoice(inv: PortalInvoice | FullInvoice) {
     const orderId = `PORTAL-INV-${inv.id.slice(0, 8)}-${Date.now()}`;
     submitPayHere(inv.total, orderId, `Invoice ${inv.invoice_number}`);
   }
@@ -182,21 +425,217 @@ export default function CustomerPortal() {
     );
   }
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
-      {/* Portal Header */}
-      <div style={{ background: '#7c3aed', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ color: 'white', fontWeight: 900, fontSize: 18, letterSpacing: '-0.5px' }}>AURAX BOOKS</span>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>/ Customer Portal</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>Welcome, <strong>{customer.name}</strong></span>
-          <button onClick={() => supabase.auth.signOut()} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>
-            Sign Out
-          </button>
+  // ─── Portal header (always visible) ──────────────────────────────────────
+  const portalHeader = (
+    <div style={{ background: '#7c3aed', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ color: 'white', fontWeight: 900, fontSize: 18, letterSpacing: '-0.5px' }}>AURAX BOOKS</span>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>/ Customer Portal</span>
+        {selectedInvoiceId && fullInvoice && (
+          <>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>/</span>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>{fullInvoice.invoice_number}</span>
+          </>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>Welcome, <strong>{customer.name}</strong></span>
+        <button onClick={() => supabase.auth.signOut()} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── Invoice detail view ──────────────────────────────────────────────────
+  if (selectedInvoiceId) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+        {portalHeader}
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
+
+          {/* Back + actions bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <button
+              onClick={() => { setSelectedInvoiceId(null); setFullInvoice(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#374151', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              ← Back to Invoices
+            </button>
+            {fullInvoice && (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={downloadInvoicePDF}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'white', border: '1px solid #7c3aed', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#7c3aed' }}>
+                  ↓ Download PDF
+                </button>
+                {fullInvoice.status !== 'paid' && fullInvoice.status !== 'cancelled' && (
+                  <button onClick={() => payInvoice(fullInvoice)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#7c3aed', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white' }}>
+                    Pay Now
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {detailLoading ? (
+            <div style={{ textAlign: 'center', padding: 80, color: '#7c3aed', fontWeight: 700 }}>Loading invoice...</div>
+          ) : !fullInvoice ? (
+            <div style={{ textAlign: 'center', padding: 80, color: '#9ca3af' }}>Invoice not found.</div>
+          ) : (
+            <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 2px 12px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+
+              {/* Invoice header band */}
+              <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', padding: '28px 36px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ color: 'white', fontWeight: 900, fontSize: 22, letterSpacing: '-0.5px', marginBottom: 4 }}>
+                      {company?.company_name || 'AURAX BOOKS'}
+                    </div>
+                    {company?.address && <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{company.address}</div>}
+                    {company?.phone && <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>Tel: {company.phone}</div>}
+                    {company?.email && <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{company.email}</div>}
+                    {company?.tax_reg && <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 }}>Tax Reg: {company.tax_reg}</div>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', marginBottom: 6 }}>TAX INVOICE</div>
+                    <div style={{ color: 'white', fontSize: 26, fontWeight: 900 }}>{fullInvoice.invoice_number}</div>
+                    <div style={{ marginTop: 8 }}>{statusBadge(fullInvoice.status)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice meta + billed to */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, borderBottom: '1px solid #f3f4f6' }}>
+                <div style={{ padding: '24px 36px', borderRight: '1px solid #f3f4f6' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Invoice Details</div>
+                  {[
+                    { label: 'Invoice #', value: fullInvoice.invoice_number },
+                    { label: 'Date', value: fullInvoice.date || '—' },
+                    { label: 'Due Date', value: fullInvoice.due_date || '—' },
+                  ].map(row => (
+                    <div key={row.label} style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, color: '#6b7280', width: 90, flexShrink: 0 }}>{row.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '24px 36px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Billed To</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>{customer.name}</div>
+                  {customer.email && <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 2 }}>{customer.email}</div>}
+                  {customer.phone && <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 2 }}>{customer.phone}</div>}
+                  {customer.address && <div style={{ fontSize: 13, color: '#6b7280' }}>{customer.address}</div>}
+                </div>
+              </div>
+
+              {/* Line items */}
+              <div style={{ padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f9fafb' }}>
+                      {['Description', 'Qty', 'Unit Price', 'Discount', 'Total'].map((h, i) => (
+                        <th key={h} style={{
+                          padding: '11px 20px',
+                          textAlign: i >= 1 ? 'right' : 'left',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          borderBottom: '1px solid #f3f4f6',
+                          ...(i === 0 ? { paddingLeft: 36 } : {}),
+                          ...(i === 4 ? { paddingRight: 36 } : {}),
+                        }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fullInvoice.lines.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '32px 36px', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>No line items</td>
+                      </tr>
+                    ) : fullInvoice.lines.map(line => (
+                      <tr key={line.id} style={{ borderBottom: '1px solid #f9fafb' }}>
+                        <td style={{ padding: '14px 20px 14px 36px', fontSize: 14, fontWeight: 500, color: '#111827' }}>{line.product_name}</td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 14, color: '#374151' }}>{line.qty}</td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 14, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>{fmt(line.unit_price)}</td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 14, color: '#6b7280' }}>{line.discount_pct ? line.discount_pct + '%' : '—'}</td>
+                        <td style={{ padding: '14px 36px 14px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>{fmt(line.line_total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px 36px', borderTop: '2px solid #f3f4f6', background: '#fafafa' }}>
+                <div style={{ minWidth: 280 }}>
+                  {[
+                    { label: 'Subtotal', value: fmt(fullInvoice.subtotal || 0), muted: true },
+                    ...(fullInvoice.tax_amount > 0 ? [{ label: 'Tax', value: fmt(fullInvoice.tax_amount), muted: true }] : []),
+                    ...(fullInvoice.discount > 0 ? [{ label: 'Discount', value: '- ' + fmt(fullInvoice.discount), muted: true }] : []),
+                  ].map(row => (
+                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, color: '#6b7280' }}>{row.label}</span>
+                      <span style={{ fontSize: 13, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>{row.value}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#7c3aed', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>TOTAL</span>
+                    <span style={{ fontSize: 18, fontWeight: 900, color: 'white', fontVariantNumeric: 'tabular-nums' }}>{fmt(fullInvoice.total || 0)}</span>
+                  </div>
+                  {(fullInvoice.paid_amount || 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                      <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Amount Paid</span>
+                      <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>{fmt(fullInvoice.paid_amount)}</span>
+                    </div>
+                  )}
+                  {(fullInvoice.balance || 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>Balance Due</span>
+                      <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 600 }}>{fmt(fullInvoice.balance)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {fullInvoice.notes && (
+                <div style={{ padding: '16px 36px 24px', borderTop: '1px solid #f3f4f6' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Notes</div>
+                  <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>{fullInvoice.notes}</div>
+                </div>
+              )}
+
+              {/* Footer actions */}
+              <div style={{ padding: '16px 36px', background: '#f9fafb', borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: '#9ca3af' }}>Thank you for your business!</span>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={downloadInvoicePDF}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #7c3aed', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>
+                    ↓ Download PDF
+                  </button>
+                  {fullInvoice.status !== 'paid' && fullInvoice.status !== 'cancelled' && (
+                    <button onClick={() => payInvoice(fullInvoice)}
+                      style={{ background: '#7c3aed', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white' }}>
+                      Pay Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
+
+  // ─── Main portal view ─────────────────────────────────────────────────────
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8f7ff' }}>
+      {portalHeader}
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
 
@@ -257,7 +696,7 @@ export default function CustomerPortal() {
           <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
             <div style={{ padding: '16px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Your Invoices</h3>
-              <span style={{ fontSize: 13, color: '#6b7280' }}>{invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>{invoices.length} invoice{invoices.length !== 1 ? 's' : ''} — click a row to view details</span>
             </div>
             {invoices.length === 0 ? (
               <div style={{ padding: 48, textAlign: 'center', color: '#9ca3af' }}>No invoices found.</div>
@@ -274,8 +713,12 @@ export default function CustomerPortal() {
                   {invoices.map(inv => {
                     const isOverdue = inv.due_date && new Date(inv.due_date) < new Date() && inv.status !== 'paid' && inv.status !== 'cancelled';
                     return (
-                      <tr key={inv.id} style={{ borderBottom: '1px solid #f9fafb' }}>
-                        <td style={{ padding: '14px 20px', fontWeight: 700, color: '#7c3aed' }}>{inv.invoice_number}</td>
+                      <tr key={inv.id}
+                        onClick={() => openInvoice(inv.id)}
+                        style={{ borderBottom: '1px solid #f9fafb', cursor: 'pointer', transition: 'background 0.1s' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#faf5ff')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                        <td style={{ padding: '14px 20px', fontWeight: 700, color: '#7c3aed', textDecoration: 'underline', textDecorationColor: '#c4b5fd' }}>{inv.invoice_number}</td>
                         <td style={{ padding: '14px 20px', fontSize: 14, color: '#374151' }}>{inv.date}</td>
                         <td style={{ padding: '14px 20px', fontSize: 14, color: isOverdue ? '#dc2626' : '#374151', fontWeight: isOverdue ? 700 : 400 }}>
                           {inv.due_date || '—'}{isOverdue ? ' ⚠' : ''}
@@ -284,7 +727,7 @@ export default function CustomerPortal() {
                         <td style={{ padding: '14px 20px' }}>{statusBadge(inv.status)}</td>
                         <td style={{ padding: '14px 20px' }}>
                           {inv.status !== 'paid' && inv.status !== 'cancelled' && (
-                            <button onClick={() => payInvoice(inv)}
+                            <button onClick={e => { e.stopPropagation(); payInvoice(inv); }}
                               style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                               Pay Now
                             </button>
