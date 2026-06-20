@@ -314,7 +314,7 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     doc.setTextColor(79, 53, 200);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text(company.company_name || 'AURAX BOOKS', 14, 16);
+    doc.text(company.company_name || 'LedgerX', 14, 16);
 
     // Invoice label
     doc.setFontSize(12);

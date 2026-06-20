@@ -59,7 +59,7 @@ export default function Login() {
       >
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <img src="/logo.png" alt="Aurax Books" style={{ height: 72, objectFit: 'contain', marginBottom: 8 }} />
+          <img src="/logo.png" alt="LedgerX" style={{ height: 72, objectFit: 'contain', marginBottom: 8 }} />
           <p style={{ fontSize: '13px', color: '#5a5f7a' }}>
             Accounting for Sri Lankan SMEs
           </p>
@@ -239,7 +239,7 @@ export default function Login() {
             paddingTop: '16px',
           }}
         >
-          © 2025 Aurax.dev · Rs. 3,000/month
+          © 2025 LedgerX · Rs. 3,000/month
         </p>
       </div>
     </div>

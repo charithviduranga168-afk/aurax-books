@@ -277,7 +277,7 @@ export default function Reports() {
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
     doc.text(company.company_name || '', 14, pageH - 6)
-    doc.text('Confidential — Aurax Books', 105, pageH - 6, { align: 'center' })
+    doc.text('Confidential — LedgerX', 105, pageH - 6, { align: 'center' })
 
     const filename = titles[reportData.type]?.replace(/ /g, '_') || 'Report'
     doc.save(filename + '_' + fromDate + '.pdf')

@@ -188,7 +188,7 @@ export default function CustomerPortal() {
     doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text(company?.company_name || 'AURAX BOOKS', 14, 17);
+    doc.text(company?.company_name || 'LedgerX', 14, 17);
 
     // "TAX INVOICE" label below
     doc.setFontSize(10);
@@ -429,7 +429,7 @@ export default function CustomerPortal() {
   const portalHeader = (
     <div style={{ background: '#7c3aed', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src="/logo.png" alt="Aurax Books" style={{ height: 32, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        <img src="/logo.png" alt="LedgerX" style={{ height: 32, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
         <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>/ Customer Portal</span>
         {selectedInvoiceId && fullInvoice && (
           <>
@@ -489,7 +489,7 @@ export default function CustomerPortal() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ color: 'white', fontWeight: 900, fontSize: 22, letterSpacing: '-0.5px', marginBottom: 4 }}>
-                      {company?.company_name || 'AURAX BOOKS'}
+                      {company?.company_name || 'LedgerX'}
                     </div>
                     {company?.address && <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{company.address}</div>}
                     {company?.phone && <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>Tel: {company.phone}</div>}

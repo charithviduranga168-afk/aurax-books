@@ -137,7 +137,7 @@ export default function Subscription() {
       cancel_url: window.location.origin,
       notify_url: '',
       order_id: orderId,
-      items: `Aurax Books Subscription — ${currentPeriod} (${totalUsers} user${totalUsers > 1 ? 's' : ''})`,
+      items: `LedgerX Subscription — ${currentPeriod} (${totalUsers} user${totalUsers > 1 ? 's' : ''})`,
       currency,
       amount,
       first_name: (user.email || '').split('@')[0],
@@ -214,7 +214,7 @@ export default function Subscription() {
       <div className="page-header">
         <div>
           <div className="page-title">Subscription & Team</div>
-          <div className="page-sub">Manage your Aurax Books plan and team members</div>
+          <div className="page-sub">Manage your LedgerX plan and team members</div>
         </div>
       </div>
 
@@ -394,7 +394,7 @@ export default function Subscription() {
             {/* Member rows */}
             {members.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: '13px' }}>
-                No team members yet. Add members to collaborate on Aurax Books.
+                No team members yet. Add members to collaborate on LedgerX.
               </div>
             ) : (
               members.map((m) => (
