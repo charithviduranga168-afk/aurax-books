@@ -203,12 +203,12 @@ export default function Login() {
         .lx-signin:hover { transform:translateY(-2px); box-shadow:0 16px 34px rgba(124,92,246,.46) !important; }
       `}</style>
 
-      <div className="lx-root" style={{ minHeight: '100vh', background: '#f0eefa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32, boxSizing: 'border-box' }}>
-        <div style={{ background: '#fff', borderRadius: 4, boxShadow: '0 18px 50px rgba(60,50,120,.14)', overflow: 'hidden', width: '100%', maxWidth: 1280 }}>
-          <div style={{ display: 'flex', height: 760 }}>
+      <div className="lx-root" style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
             {/* ── LEFT PANEL ── */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'linear-gradient(155deg,#efedfc 0%,#e8ecfb 55%,#f1ecfa 100%)', padding: '54px 56px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 28 }}>
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'linear-gradient(155deg,#efedfc 0%,#e8ecfb 55%,#f1ecfa 100%)', padding: '36px 48px 36px 52px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
 
               {/* Dot grid */}
               <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle,rgba(124,92,246,.13) 1.3px,transparent 1.3px)', backgroundSize: '24px 24px', WebkitMaskImage: 'radial-gradient(120% 90% at 35% 45%,#000 40%,transparent 78%)', maskImage: 'radial-gradient(120% 90% at 35% 45%,#000 40%,transparent 78%)', pointerEvents: 'none' }} />
@@ -227,9 +227,9 @@ export default function Login() {
               </div>
 
               {/* Mini ERP frame */}
-              <div style={{ position: 'relative', zIndex: 2, background: '#fff', borderRadius: 18, boxShadow: '0 30px 70px rgba(70,55,140,.2)', overflow: 'hidden', display: 'flex', animation: 'lx-fadeUp 1s ease both .25s' }}>
+              <div style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, background: '#fff', borderRadius: 18, boxShadow: '0 30px 70px rgba(70,55,140,.2)', overflow: 'hidden', display: 'flex', animation: 'lx-fadeUp 1s ease both .25s' }}>
                 {/* Sidebar rail */}
-                <div style={{ width: 206, flexShrink: 0, background: '#faf9fe', borderRight: '1px solid #f0eff7', padding: '14px 12px' }}>
+                <div style={{ width: 192, flexShrink: 0, background: '#faf9fe', borderRight: '1px solid #f0eff7', padding: '14px 12px', overflowY: 'auto' }}>
                   <img src="/logo.png" alt="LedgerX" style={{ height: 30, width: 'auto', display: 'block', margin: '2px 0 14px 6px', objectFit: 'contain' }} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {MODULES.map((m, i) => (
@@ -253,24 +253,24 @@ export default function Login() {
                   </div>
                 </div>
                 {/* Module panel */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
                   <ModulePanel key={activeIdx} mod={activeMod} />
                 </div>
               </div>
             </div>
 
             {/* ── RIGHT PANEL ── */}
-            <div style={{ width: 540, flexShrink: 0, background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 64px', position: 'relative', zIndex: 2 }}>
+            <div style={{ width: 500, flexShrink: 0, background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 52px', position: 'relative', zIndex: 2, overflowY: 'auto' }}>
               <div style={{ maxWidth: 392, width: '100%', margin: '0 auto', animation: 'lx-fadeUp .8s ease both' }}>
 
                 {/* Logo */}
-                <img src="/logo.png" alt="LedgerX" style={{ height: 62, width: 'auto', display: 'block', marginBottom: 30, objectFit: 'contain' }} />
+                <img src="/logo.png" alt="LedgerX" style={{ height: 52, width: 'auto', display: 'block', marginBottom: 22, objectFit: 'contain' }} />
 
                 {/* Heading */}
-                <h1 style={{ margin: '0 0 8px', fontSize: 31, fontWeight: 800, letterSpacing: '-.02em', color: '#1d1a36' }}>
+                <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', color: '#1d1a36' }}>
                   {mode === 'login' ? 'Welcome back' : 'Create account'}
                 </h1>
-                <p style={{ margin: '0 0 32px', fontSize: 15, color: '#85839c' }}>
+                <p style={{ margin: '0 0 24px', fontSize: 14.5, color: '#85839c' }}>
                   {mode === 'login' ? 'Sign in to access your workspace' : 'Get started with LedgerX today'}
                 </p>
 
@@ -289,7 +289,7 @@ export default function Login() {
                 <form onSubmit={handleSubmit}>
                   {/* Email */}
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#46435f', marginBottom: 8 }}>Email address</label>
-                  <div style={{ position: 'relative', marginBottom: 20 }}>
+                  <div style={{ position: 'relative', marginBottom: 16 }}>
                     <svg style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#b0adc8', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                     </svg>
@@ -321,7 +321,7 @@ export default function Login() {
 
                   {/* Remember + Forgot */}
                   {mode === 'login' && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                       <button type="button" onClick={() => setRemember(!remember)} style={{ display: 'flex', alignItems: 'center', gap: 9, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
                         <span style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${remember ? '#7c5cf6' : '#d4d2e0'}`, background: remember ? '#7c5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
                           {remember && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -343,7 +343,7 @@ export default function Login() {
                 </form>
 
                 {/* Divider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '24px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '18px 0' }}>
                   <span style={{ flex: 1, height: 1, background: '#ebeaf3' }} />
                   <span style={{ fontSize: 12.5, color: '#9b99ad' }}>or continue with</span>
                   <span style={{ flex: 1, height: 1, background: '#ebeaf3' }} />
@@ -363,7 +363,7 @@ export default function Login() {
                   Continue with Google
                 </button>
 
-                <p style={{ textAlign: 'center', margin: '28px 0 0', fontSize: 14, color: '#85839c' }}>
+                <p style={{ textAlign: 'center', margin: '18px 0 0', fontSize: 14, color: '#85839c' }}>
                   {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                   <a href="#" onClick={e => { e.preventDefault(); setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess(''); }}
                     style={{ color: '#7c5cf6', fontWeight: 700, textDecoration: 'none' }}>
@@ -375,7 +375,7 @@ export default function Login() {
           </div>
 
           {/* ── FOOTER ── */}
-          <div style={{ borderTop: '1px solid #f0eff7', padding: '18px 64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, background: '#fcfcff' }}>
+          <div style={{ borderTop: '1px solid #f0eff7', padding: '14px 52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, background: '#fcfcff', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
               <span style={{ fontSize: 12.5, color: '#8a889e' }}>© 2025 LedgerX</span>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#cdcad9', display: 'inline-block' }} />
