@@ -1,6 +1,26 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { supabase } from '../supabase';
 
+// ── Module SVG icon paths (matches main sidebar icons) ────────────
+const MODULE_ICON_PATHS: Record<string, string> = {
+  'Sales':         'M23 6l-9.5 9.5-5-5L1 18 M17 6h6v6',
+  'Purchasing':    'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M3 6h18 M16 10a4 4 0 01-8 0',
+  'Inventory':     'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12',
+  'Manufacturing': 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',
+  'Accounting':    'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8',
+  'HR & Payroll':  'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75',
+  'Operations':    'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z',
+  'Point of Sale': 'M20 3H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2z M8 21h8 M12 17v4',
+};
+
+function ModIcon({ name, color, size = 14 }: { name: string; color: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={MODULE_ICON_PATHS[name] ?? MODULE_ICON_PATHS['Sales']} />
+    </svg>
+  );
+}
+
 // ── Mini ERP module data ──────────────────────────────────────────
 const MODULES = [
   { name: 'Sales',         color: '#7c5cf6', iconBg: '#efe9fd', period: 'This Month',
@@ -91,8 +111,8 @@ function ModulePanel({ mod }: { mod: typeof MODULES[0] }) {
     <div style={{ padding: '18px 20px', animation: 'lx-swap .4s ease' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 32, height: 32, borderRadius: 9, background: mod.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-            {mod.name === 'Sales' ? '📈' : mod.name === 'Purchasing' ? '🛒' : mod.name === 'Inventory' ? '📦' : mod.name === 'Manufacturing' ? '⚙️' : mod.name === 'Accounting' ? '📒' : mod.name === 'HR & Payroll' ? '👥' : mod.name === 'Operations' ? '🎯' : '🖥️'}
+          <span style={{ width: 32, height: 32, borderRadius: 9, background: mod.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ModIcon name={mod.name} color={mod.color} size={15} />
           </span>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: '#1d1a36', lineHeight: 1.1 }}>{mod.name}</div>
@@ -244,8 +264,8 @@ export default function Login() {
                           borderLeft: i === activeIdx ? `3px solid #7c5cf6` : '3px solid transparent',
                           transition: 'all .15s',
                         }}>
-                        <span style={{ width: 26, height: 26, borderRadius: 7, background: m.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
-                          {m.name === 'Sales' ? '📈' : m.name === 'Purchasing' ? '🛒' : m.name === 'Inventory' ? '📦' : m.name === 'Manufacturing' ? '⚙️' : m.name === 'Accounting' ? '📒' : m.name === 'HR & Payroll' ? '👥' : m.name === 'Operations' ? '🎯' : '🖥️'}
+                        <span style={{ width: 26, height: 26, borderRadius: 7, background: m.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <ModIcon name={m.name} color={m.color} size={13} />
                         </span>
                         <span style={{ fontSize: 12.5, fontWeight: i === activeIdx ? 700 : 500, color: i === activeIdx ? '#7c5cf6' : '#6b6885', whiteSpace: 'nowrap' }}>{m.name}</span>
                       </div>
