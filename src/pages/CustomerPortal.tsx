@@ -429,7 +429,7 @@ export default function CustomerPortal() {
   const portalHeader = (
     <div style={{ background: '#7c3aed', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ color: 'white', fontWeight: 900, fontSize: 18, letterSpacing: '-0.5px' }}>AURAX BOOKS</span>
+        <img src="/logo.png" alt="Aurax Books" style={{ height: 32, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
         <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>/ Customer Portal</span>
         {selectedInvoiceId && fullInvoice && (
           <>

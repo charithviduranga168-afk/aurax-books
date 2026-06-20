@@ -59,21 +59,7 @@ export default function Login() {
       >
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '44px', marginBottom: '10px' }}>📒</div>
-          <h1
-            style={{
-              fontFamily: 'Inter Tight, sans-serif',
-              fontSize: '22px',
-              fontWeight: 800,
-              background: 'linear-gradient(135deg, #3b1fa8, #6c47ff)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '2px',
-              marginBottom: '6px',
-            }}
-          >
-            AURAX BOOKS
-          </h1>
+          <img src="/logo.png" alt="Aurax Books" style={{ height: 72, objectFit: 'contain', marginBottom: 8 }} />
           <p style={{ fontSize: '13px', color: '#5a5f7a' }}>
             Accounting for Sri Lankan SMEs
           </p>

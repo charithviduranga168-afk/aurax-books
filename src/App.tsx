@@ -196,8 +196,7 @@ export default function App() {
   if (loading || (user && userType === 'checking'))
     return (
       <div className="splash">
-        <div className="splash-logo">📒</div>
-        <div className="splash-title">AURAX BOOKS</div>
+        <img src="/logo.png" alt="Aurax Books" style={{ height: 80, objectFit: 'contain', marginBottom: 16 }} />
         <div className="splash-sub">Loading...</div>
       </div>
     );
@@ -339,9 +338,9 @@ export default function App() {
         {/* Brand */}
         <div className="sidebar-brand">
           {sidebarOpen ? (
-            <span className="brand-name">AURAX BOOKS</span>
+            <img src="/logo.png" alt="Aurax Books" style={{ height: 36, objectFit: 'contain' }} />
           ) : (
-            <span className="brand-name-short">AB</span>
+            <img src="/logo.png" alt="AB" style={{ height: 28, objectFit: 'contain' }} />
           )}
         </div>
 
