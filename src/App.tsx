@@ -252,11 +252,7 @@ export default function App() {
 
   const nav = (p: Page) => {
     setPage(p);
-    if (p === 'customers') {
-      setModuleMode(true);
-    } else {
-      setModuleMode(false);
-    }
+    setModuleMode(p !== 'dashboard');
   };
 
   const exitModule = () => {
