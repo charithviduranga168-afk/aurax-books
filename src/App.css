@@ -70,13 +70,18 @@ body {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  transition: width 0.22s ease;
+  transition: width 0.35s cubic-bezier(0.4,0,0.2,1), min-width 0.35s cubic-bezier(0.4,0,0.2,1), border-color 0.35s;
   overflow: hidden;
   flex-shrink: 0;
   z-index: 10;
 }
-.sidebar.open  { width: var(--sidebar-w); }
+.sidebar.open   { width: var(--sidebar-w); }
 .sidebar.closed { width: var(--sidebar-closed); }
+.sidebar.module-hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right-color: transparent;
+}
 
 /* Brand / Logo row */
 .sidebar-brand {

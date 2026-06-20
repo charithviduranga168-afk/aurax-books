@@ -185,6 +185,7 @@ export default function App() {
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
   const [page, setPage] = useState<Page>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [moduleMode, setModuleMode] = useState(false);
   const [openGroups] = useState<string[]>(menuGroups.map((g) => g.label));
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
@@ -249,7 +250,19 @@ export default function App() {
 
   if (userType === 'customer') return <CustomerPortal />;
 
-  const nav = (p: Page) => setPage(p);
+  const nav = (p: Page) => {
+    setPage(p);
+    if (p === 'customers') {
+      setModuleMode(true);
+    } else {
+      setModuleMode(false);
+    }
+  };
+
+  const exitModule = () => {
+    setModuleMode(false);
+    setPage('dashboard');
+  };
 
   const currentGroup = menuGroups.find((g) => g.items.some((i) => i.page === page));
   const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale', userroles: 'Users & Roles', ecommerce: 'E-Commerce' };
@@ -261,7 +274,7 @@ export default function App() {
       case 'dashboard':
         return <Dashboard nav={nav} />;
       case 'customers':
-        return <Customers />;
+        return <Customers onBack={exitModule} />;
       case 'suppliers':
         return <Suppliers />;
       case 'products':
@@ -368,7 +381,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${moduleMode ? 'module-hidden' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 32 : 26, objectFit: 'contain', flexShrink: 0 }} />
@@ -426,8 +439,8 @@ export default function App() {
       {/* Main */}
       <main className="main">
         <header className="topbar">
-          {/* Hamburger */}
-          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar">
+          {/* Hamburger — hidden in module mode */}
+          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar" style={{ display: moduleMode ? 'none' : undefined }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
