@@ -32,6 +32,7 @@ import Projects from './pages/Projects';
 import CustomerPortal from './pages/CustomerPortal';
 import ECommerce from './pages/ECommerce';
 import PublicStore from './pages/PublicStore';
+import MRP from './pages/MRP';
 import './App.css';
 
 export type Page =
@@ -63,7 +64,8 @@ export type Page =
   | 'userroles'
   | 'qc'
   | 'projects'
-  | 'ecommerce';
+  | 'ecommerce'
+  | 'mrp';
 
 const menuGroups = [
   {
@@ -113,6 +115,7 @@ const menuGroups = [
     items: [
       { page: 'qc', label: 'Quality Control' },
       { page: 'projects', label: 'Projects' },
+      { page: 'mrp', label: 'MRP' },
     ],
   },
   {
@@ -321,6 +324,8 @@ export default function App() {
         return <Projects />;
       case 'ecommerce':
         return <ECommerce />;
+      case 'mrp':
+        return <MRP />;
       case 'subscription':
         return <Subscription />;
       default:
