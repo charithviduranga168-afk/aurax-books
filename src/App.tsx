@@ -435,15 +435,34 @@ export default function App() {
       {/* Main */}
       <main className="main">
         <header className="topbar">
-          {/* Hamburger — hidden in module mode */}
-          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar" style={{ display: moduleMode ? 'none' : undefined }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
+          {moduleMode ? (
+            /* Back to Dashboard button */
+            <button className="toggle-btn" onClick={exitModule} title="Back to Dashboard" style={{ width: 'auto', padding: '0 10px', gap: 6, display: 'flex', alignItems: 'center', color: 'var(--text2)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </button>
+          ) : (
+            /* Hamburger */
+            <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          )}
 
-          {/* Page title */}
-          <span className="topbar-title">{page === 'dashboard' ? 'Dashboard' : currentLabel}</span>
+          {/* Breadcrumb */}
+          {moduleMode ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+              <span style={{ color: 'var(--text3)', cursor: 'pointer' }} onClick={exitModule}>Dashboard</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text3)' }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              <span className="topbar-title">{currentLabel}</span>
+            </div>
+          ) : (
+            <span className="topbar-title">Dashboard</span>
+          )}
 
           {/* Search */}
           <div className="topbar-search">

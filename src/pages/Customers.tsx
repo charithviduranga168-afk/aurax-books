@@ -14,7 +14,7 @@ interface Customer {
 }
 
 interface Props {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const fmt = (n: number) =>
@@ -345,8 +345,6 @@ export default function Customers({ onBack }: Props) {
   // ── List view ──
   return (
     <div>
-      <BackBtn label="Dashboard" onClick={onBack} />
-
       <div className="page-header">
         <div>
           <div className="page-title">Customers</div>
