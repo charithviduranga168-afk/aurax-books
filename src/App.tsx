@@ -1,5 +1,49 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
+
+// ── Icon component ──────────────────────────────────────────────
+const ICON_PATHS: Record<string, string> = {
+  dashboard:        'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10',
+  customers:        'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8',
+  salesorders:      'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2 M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2 M9 12h6 M9 16h4',
+  invoices:         'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8',
+  receipts:         'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11',
+  ecommerce:        'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M3 6h18 M16 10a4 4 0 01-8 0',
+  suppliers:        'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
+  purchaseorders:   'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12',
+  bills:            'M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
+  payments:         'M1 4h22v16H1z M1 10h22',
+  grn:              'M1 3h15v13H1z M16 8l4 0 3 3v6h-7V8z M5.5 16a1.5 1.5 0 100 3 1.5 1.5 0 000-3z M18.5 16a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
+  products:         'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z',
+  categories:       'M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z',
+  inventory:        'M18 20V10 M12 20V4 M6 20v-6',
+  stockadjustments: 'M12 20h9 M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z',
+  coa:              'M22 12h-4l-3 9L9 3l-3 9H2',
+  expenses:         'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16',
+  journal:          'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z',
+  bankreconciliation:'M3 22h18 M6 22V11 M18 22V11 M2 11h20 M12 2L2 7h20z',
+  hr:               'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75',
+  qc:               'M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3',
+  projects:         'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z',
+  mrp:              'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',
+  reports:          'M21.21 15.89A10 10 0 118 2.83 M22 12A10 10 0 0012 2v10z',
+  analytics:        'M18 20V10 M12 20V4 M6 20v-6',
+  manufacturing:    'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',
+  pos:              'M20 3H4a2 2 0 00-2 2v11a2 2 0 002 2h16a2 2 0 002-2V5a2 2 0 00-2-2z M8 21h8 M12 17v4',
+  userroles:        'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75',
+  subscription:     'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  settings:         'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
+  logout:           'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9',
+};
+
+function NavIcon({ name, size = 15 }: { name: string; size?: number }) {
+  return (
+    <svg className="nav-item-icon" width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={ICON_PATHS[name] || ICON_PATHS.dashboard} />
+    </svg>
+  );
+}
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
@@ -141,9 +185,7 @@ export default function App() {
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
   const [page, setPage] = useState<Page>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [openGroups, setOpenGroups] = useState<string[]>(
-    menuGroups.map((g) => g.label)
-  );
+  const [openGroups] = useState<string[]>(menuGroups.map((g) => g.label));
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
   const [invoicePrefill, setInvoicePrefill] = useState<{ so: any; lines: any[] } | null>(null);
@@ -209,18 +251,10 @@ export default function App() {
 
   const nav = (p: Page) => setPage(p);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) =>
-      prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]
-    );
-  };
-
-  const currentGroup = menuGroups.find((g) =>
-    g.items.some((i) => i.page === page)
-  );
+  const currentGroup = menuGroups.find((g) => g.items.some((i) => i.page === page));
   const footerLabels: Record<string, string> = { subscription: 'Subscription & Team', settings: 'Settings', pos: 'Point of Sale', userroles: 'Users & Roles', ecommerce: 'E-Commerce' };
-  const currentLabel =
-    currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
+  const currentLabel = currentGroup?.items.find((i) => i.page === page)?.label || footerLabels[page] || 'Dashboard';
+  const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
 
   const renderPage = () => {
     switch (page) {
@@ -337,75 +371,54 @@ export default function App() {
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         {/* Brand */}
         <div className="sidebar-brand">
-          {sidebarOpen ? (
-            <img src="/logo.png" alt="LedgerX" style={{ height: 36, objectFit: 'contain' }} />
-          ) : (
-            <img src="/logo.png" alt="AB" style={{ height: 28, objectFit: 'contain' }} />
-          )}
+          <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 32 : 26, objectFit: 'contain', flexShrink: 0 }} />
+          {sidebarOpen && <span className="brand-name">LedgerX</span>}
         </div>
 
         <nav className="sidebar-nav">
           {/* Dashboard */}
-          <button
-            className={`nav-item ${page === 'dashboard' ? 'active' : ''}`}
-            onClick={() => nav('dashboard')}
-          >
-            {sidebarOpen ? 'Dashboard' : 'DB'}
+          <button className={`nav-item ${page === 'dashboard' ? 'active' : ''}`} onClick={() => nav('dashboard')}>
+            <NavIcon name="dashboard" />
+            {sidebarOpen && <span className="nav-item-label">Dashboard</span>}
           </button>
 
-          {/* Module groups */}
-          {menuGroups.map((group) => {
-            const isOpen = openGroups.includes(group.label);
-            const hasActive = group.items.some((i) => i.page === page);
-
-            return (
-              <div key={group.label} className="nav-module">
+          {/* Module groups — flat with section labels */}
+          {menuGroups.map((group) => (
+            <div key={group.label}>
+              {sidebarOpen && <div className="nav-section-label">{group.label}</div>}
+              {group.items.map((item) => (
                 <button
-                  className={`nav-module-header ${hasActive ? 'has-active' : ''}`}
-                  onClick={() => sidebarOpen && toggleGroup(group.label)}
+                  key={item.page}
+                  className={`nav-item ${page === item.page ? 'active' : ''}`}
+                  onClick={() => nav(item.page as Page)}
+                  title={!sidebarOpen ? item.label : undefined}
                 >
-                  <span className="nav-module-label">
-                    {sidebarOpen ? group.label : group.label.slice(0, 2)}
-                  </span>
-                  {sidebarOpen && (
-                    <span className="nav-chevron">{isOpen ? '▾' : '▸'}</span>
-                  )}
+                  <NavIcon name={item.page} />
+                  {sidebarOpen && <span className="nav-item-label">{item.label}</span>}
                 </button>
-
-                {isOpen && sidebarOpen && (
-                  <div className="nav-module-items">
-                    {group.items.map((item) => (
-                      <button
-                        key={item.page}
-                        className={`nav-sub-item ${page === item.page ? 'active' : ''}`}
-                        onClick={() => nav(item.page as Page)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
         <div className="sidebar-footer">
-          <button className={`nav-item ${page === 'userroles' ? 'active' : ''}`} onClick={() => nav('userroles')}>
-            {sidebarOpen ? 'Users & Roles' : 'UR'}
+          {sidebarOpen && <div className="nav-section-label">Account</div>}
+          <button className={`nav-item ${page === 'userroles' ? 'active' : ''}`} onClick={() => nav('userroles')} title={!sidebarOpen ? 'Users & Roles' : undefined}>
+            <NavIcon name="userroles" />
+            {sidebarOpen && <span className="nav-item-label">Users & Roles</span>}
           </button>
-          <button className={`nav-item ${page === 'subscription' ? 'active' : ''}`} onClick={() => nav('subscription')}>
-            {sidebarOpen ? 'Subscription' : 'Su'}
+          <button className={`nav-item ${page === 'subscription' ? 'active' : ''}`} onClick={() => nav('subscription')} title={!sidebarOpen ? 'Subscription' : undefined}>
+            <NavIcon name="subscription" />
+            {sidebarOpen && <span className="nav-item-label">Subscription</span>}
           </button>
-          <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => nav('settings')}>
-            {sidebarOpen ? 'Settings' : 'St'}
+          <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => nav('settings')} title={!sidebarOpen ? 'Settings' : undefined}>
+            <NavIcon name="settings" />
+            {sidebarOpen && <span className="nav-item-label">Settings</span>}
           </button>
-          <button
-            className="nav-item signout"
-            onClick={() => supabase.auth.signOut()}
-          >
-            {sidebarOpen ? 'Sign Out' : '→'}
+          <button className="nav-item signout" onClick={() => supabase.auth.signOut()} title={!sidebarOpen ? 'Sign Out' : undefined}>
+            <NavIcon name="logout" />
+            {sidebarOpen && <span className="nav-item-label">Sign Out</span>}
           </button>
         </div>
       </aside>
@@ -413,25 +426,43 @@ export default function App() {
       {/* Main */}
       <main className="main">
         <header className="topbar">
-          <button
-            className="toggle-btn"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? '‹' : '›'}
+          {/* Hamburger */}
+          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
           </button>
-          <div className="topbar-breadcrumb">
-            {currentGroup && (
-              <span className="breadcrumb-parent">{currentGroup.label} / </span>
-            )}
-            <span className="topbar-title">
-              {page === 'dashboard' ? 'Dashboard' : currentLabel}
-            </span>
+
+          {/* Page title */}
+          <span className="topbar-title">{page === 'dashboard' ? 'Dashboard' : currentLabel}</span>
+
+          {/* Search */}
+          <div className="topbar-search">
+            <svg className="topbar-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input placeholder="Search..." />
           </div>
-          <div className="topbar-user">
-            <span className="user-avatar">
-              {user.email?.charAt(0).toUpperCase()}
-            </span>
-            <span className="user-email">{user.email}</span>
+
+          {/* Right side */}
+          <div className="topbar-right">
+            <button className="topbar-icon-btn" title="Notifications">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 01-3.46 0"/>
+              </svg>
+              <span className="notif-badge">3</span>
+            </button>
+
+            <div className="topbar-user">
+              <div className="user-avatar">{user.email?.charAt(0).toUpperCase()}</div>
+              <div className="user-info">
+                <span className="user-name">{displayName}</span>
+                <span className="user-email">{user.email}</span>
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: 'var(--text3)', marginLeft: 2 }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
           </div>
         </header>
         <div className="page-content">{renderPage()}</div>
