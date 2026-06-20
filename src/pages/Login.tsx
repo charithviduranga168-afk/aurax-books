@@ -30,12 +30,11 @@ export default function Login() {
       minHeight: '100vh',
       display: 'flex',
       fontFamily: 'Inter, sans-serif',
-      background: '#0f0a2e',
     }}>
       {/* ── Left panel ── */}
       <div style={{
         flex: '0 0 48%',
-        background: 'linear-gradient(145deg, #1a0a5e 0%, #3b1fa8 45%, #6c47ff 100%)',
+        background: 'linear-gradient(145deg, #5b21b6 0%, #7c3aed 40%, #9333ea 70%, #c026d3 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -45,19 +44,34 @@ export default function Login() {
         overflow: 'hidden',
       }}>
         {/* Decorative blobs */}
-        <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', top: -80, left: -80 }} />
-        <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', bottom: -60, right: -60 }} />
-        <div style={{ position: 'absolute', width: 160, height: 160, borderRadius: '50%', background: 'rgba(108,71,255,0.3)', top: '40%', right: -40 }} />
+        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'rgba(192,132,252,0.25)', top: -120, left: -100, filter: 'blur(60px)' }} />
+        <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'rgba(6,182,212,0.15)', bottom: -80, right: -60, filter: 'blur(50px)' }} />
+        <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'rgba(244,114,182,0.2)', top: '55%', left: '10%', filter: 'blur(40px)' }} />
+
+        {/* Subtle dot grid pattern */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }} />
 
         {/* Logo */}
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: 48 }}>
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: 44 }}>
           <img
             src="/logo.png"
             alt="LedgerX"
-            style={{ height: 120, objectFit: 'contain', marginBottom: 20, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.3))' }}
+            style={{ height: 130, objectFit: 'contain', marginBottom: 20, filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.25))' }}
           />
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
-            Smart ERP for Sri Lanka
+          <div style={{
+            color: 'rgba(255,255,255,0.9)',
+            fontSize: 20,
+            fontWeight: 700,
+            letterSpacing: '-0.3px',
+            lineHeight: 1.3,
+            maxWidth: 280,
+            margin: '0 auto',
+          }}>
+            Control your business<br />in one clear view
           </div>
         </div>
 
@@ -71,27 +85,28 @@ export default function Login() {
             { icon: '🔒', label: 'Customer Portal & Payments' },
           ].map(f => (
             <div key={f.label} style={{
-              display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16,
-              background: 'rgba(255,255,255,0.08)', borderRadius: 12,
-              padding: '12px 18px', backdropFilter: 'blur(4px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', gap: 14, marginBottom: 10,
+              background: 'rgba(255,255,255,0.12)',
+              borderRadius: 14,
+              padding: '11px 18px',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.18)',
             }}>
-              <span style={{ fontSize: 18 }}>{f.icon}</span>
-              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }}>{f.label}</span>
+              <span style={{ fontSize: 17 }}>{f.icon}</span>
+              <span style={{ color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: 500 }}>{f.label}</span>
             </div>
           ))}
         </div>
 
-        {/* Bottom tagline */}
-        <div style={{ position: 'relative', zIndex: 1, marginTop: 40, textAlign: 'center' }}>
-          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>© 2025 LedgerX · Built for Sri Lankan SMEs</div>
+        <div style={{ position: 'relative', zIndex: 1, marginTop: 36, color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+          © 2025 LedgerX · Built for Sri Lankan SMEs
         </div>
       </div>
 
       {/* ── Right panel ── */}
       <div style={{
         flex: 1,
-        background: '#ffffff',
+        background: '#f8f7ff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -99,22 +114,25 @@ export default function Login() {
       }}>
         <div style={{ width: '100%', maxWidth: 400 }}>
 
-          {/* Header */}
-          <div style={{ marginBottom: 36 }}>
-            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#0f0a2e', margin: '0 0 8px', letterSpacing: '-0.5px' }}>
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
+          {/* Tiny logo mark for context */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
+            <img src="/logo.png" alt="LedgerX" style={{ height: 32, objectFit: 'contain' }} />
+          </div>
+
+          {/* Heading */}
+          <div style={{ marginBottom: 32 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e1b4b', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+              {mode === 'login' ? 'Welcome back 👋' : 'Create your account'}
             </h1>
             <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
-              {mode === 'login'
-                ? 'Sign in to your LedgerX account'
-                : 'Start your free LedgerX account today'}
+              {mode === 'login' ? 'Sign in to continue to LedgerX' : 'Get started with LedgerX today'}
             </p>
           </div>
 
           {/* Alerts */}
           {error && (
             <div style={{
-              background: '#fef3f2', border: '1px solid #fecdca', borderRadius: 10,
+              background: '#fef3f2', border: '1px solid #fecdca', borderRadius: 12,
               padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#b42318',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
@@ -123,7 +141,7 @@ export default function Login() {
           )}
           {success && (
             <div style={{
-              background: '#ecfdf3', border: '1px solid #abefc6', borderRadius: 10,
+              background: '#ecfdf3', border: '1px solid #abefc6', borderRadius: 12,
               padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#027a48',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
@@ -133,7 +151,7 @@ export default function Login() {
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 7 }}>
                 Email Address
               </label>
@@ -146,10 +164,10 @@ export default function Login() {
                 style={{
                   width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb',
                   borderRadius: 12, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-                  color: '#111827', background: '#f9fafb', transition: 'all 0.15s',
+                  color: '#111827', background: '#fff', transition: 'all 0.15s',
                 }}
-                onFocus={e => { e.target.style.borderColor = '#6c47ff'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(108,71,255,0.1)'; }}
-                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }}
+                onFocus={e => { e.target.style.borderColor = '#9333ea'; e.target.style.boxShadow = '0 0 0 3px rgba(147,51,234,0.12)'; }}
+                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -167,10 +185,10 @@ export default function Login() {
                 style={{
                   width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb',
                   borderRadius: 12, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-                  color: '#111827', background: '#f9fafb', transition: 'all 0.15s',
+                  color: '#111827', background: '#fff', transition: 'all 0.15s',
                 }}
-                onFocus={e => { e.target.style.borderColor = '#6c47ff'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(108,71,255,0.1)'; }}
-                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.background = '#f9fafb'; e.target.style.boxShadow = 'none'; }}
+                onFocus={e => { e.target.style.borderColor = '#9333ea'; e.target.style.boxShadow = '0 0 0 3px rgba(147,51,234,0.12)'; }}
+                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -179,33 +197,35 @@ export default function Login() {
               disabled={loading}
               style={{
                 width: '100%', padding: '14px',
-                background: loading ? '#a78bfa' : 'linear-gradient(135deg, #3b1fa8, #6c47ff)',
+                background: loading
+                  ? '#c4b5fd'
+                  : 'linear-gradient(135deg, #7c3aed 0%, #9333ea 60%, #c026d3 100%)',
                 color: '#fff', border: 'none', borderRadius: 12,
                 fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 20px rgba(108,71,255,0.4)',
+                boxShadow: loading ? 'none' : '0 4px 20px rgba(147,51,234,0.35)',
                 transition: 'all 0.2s', letterSpacing: '0.01em',
               }}
-              onMouseEnter={e => { if (!loading) (e.currentTarget.style.transform = 'translateY(-1px)'); }}
-              onMouseLeave={e => { (e.currentTarget.style.transform = 'translateY(0)'); }}
+              onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(147,51,234,0.45)'; } }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(147,51,234,0.35)'; }}
             >
               {loading ? 'Please wait...' : mode === 'login' ? 'Sign In →' : 'Create Account →'}
             </button>
           </form>
 
-          {/* Toggle mode */}
-          <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#6b7280' }}>
+          {/* Toggle */}
+          <p style={{ textAlign: 'center', marginTop: 22, fontSize: 14, color: '#6b7280' }}>
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
               onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess(''); }}
-              style={{ background: 'none', border: 'none', color: '#6c47ff', cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: 0 }}>
+              style={{ background: 'none', border: 'none', color: '#9333ea', cursor: 'pointer', fontSize: 14, fontWeight: 700, padding: 0 }}>
               {mode === 'login' ? 'Sign Up' : 'Sign In'}
             </button>
           </p>
 
-          {/* Rs pricing note */}
-          <div style={{ marginTop: 40, padding: '14px 18px', background: '#f8f7ff', borderRadius: 12, border: '1px solid #ede9fe', textAlign: 'center' }}>
-            <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 700, marginBottom: 2 }}>Rs. 3,000 / month</div>
-            <div style={{ fontSize: 11, color: '#9ca3af' }}>Full ERP access · Unlimited users · Local support</div>
+          {/* Pricing */}
+          <div style={{ marginTop: 36, padding: '16px 20px', background: 'white', borderRadius: 14, border: '1px solid #ede9fe', textAlign: 'center', boxShadow: '0 1px 6px rgba(147,51,234,0.08)' }}>
+            <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 800, marginBottom: 3 }}>Rs. 3,000 / month</div>
+            <div style={{ fontSize: 12, color: '#9ca3af' }}>Full ERP access · Unlimited users · Local support</div>
           </div>
         </div>
       </div>
