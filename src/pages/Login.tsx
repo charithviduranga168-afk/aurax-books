@@ -284,7 +284,7 @@ export default function Login() {
               <div style={{ maxWidth: 392, width: '100%', margin: '0 auto', animation: 'lx-fadeUp .8s ease both' }}>
 
                 {/* Logo */}
-                <img src="/logo.png" alt="LedgerX" style={{ height: 52, width: 'auto', display: 'block', marginBottom: 22, objectFit: 'contain' }} />
+                <img src="/logo.png" alt="LedgerX" style={{ height: 72, width: 'auto', display: 'block', marginBottom: 20, objectFit: 'contain' }} />
 
                 {/* Heading */}
                 <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', color: '#1d1a36' }}>

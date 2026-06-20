@@ -380,8 +380,7 @@ export default function App() {
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${moduleMode ? 'module-hidden' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
-          <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 32 : 26, objectFit: 'contain', flexShrink: 0 }} />
-          {sidebarOpen && <span className="brand-name">LedgerX</span>}
+          <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 52 : 30, width: sidebarOpen ? 'auto' : 30, objectFit: 'contain', objectPosition: 'center top', flexShrink: 0, transition: 'height 0.35s' }} />
         </div>
 
         <nav className="sidebar-nav">
