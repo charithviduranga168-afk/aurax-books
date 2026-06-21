@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
+import { StatusBar } from '../components/StatusBar';
 
 interface PoLine {
   id?: string;
@@ -327,33 +328,6 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
     return <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>{status}</span>;
   }
 
-  function statusPipeline(currentStatus: string) {
-    const steps = STATUS_STEPS;
-    const currentIdx = steps.indexOf(currentStatus === 'Partial' ? 'Received' : currentStatus);
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        {steps.map((step, i) => {
-          const done = currentStatus === 'Cancelled' ? false : i <= currentIdx;
-          const isCurrent = i === currentIdx && currentStatus !== 'Cancelled';
-          return (
-            <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                background: currentStatus === 'Cancelled' && step === 'Draft' ? '#fef3f2' : done ? (isCurrent ? 'var(--brand)' : 'var(--green-bg)') : 'var(--bg3)',
-                color: currentStatus === 'Cancelled' && step === 'Draft' ? '#f04438' : done ? (isCurrent ? '#fff' : '#12b76a') : 'var(--text3)',
-                border: `1px solid ${currentStatus === 'Cancelled' && step === 'Draft' ? '#fecdca' : done ? (isCurrent ? 'transparent' : 'var(--green)') : 'var(--border)'}`,
-              }}>
-                {currentStatus === 'Partial' && step === 'Received' ? 'Partial' :
-                 currentStatus === 'Cancelled' && step === 'Draft' ? '✕ Cancelled' : step}
-              </div>
-              {i < steps.length - 1 && <span style={{ color: 'var(--text3)', fontSize: '12px' }}>→</span>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
   function flowBar(poNumber: string, grn: any | null) {
     const grnDone = grn?.status === 'Received' || grn?.status === 'Partial';
     const chip = (label: string, tone: 'done' | 'active' | 'pending') => (
@@ -433,7 +407,7 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
           </div>
         </div>
 
-        {statusPipeline(po.status)}
+        <StatusBar steps={['Draft', 'Sent', 'Confirmed', 'Partial', 'Received']} current={po.status} />
         {flowBar(po.po_number, linkedGrns[0] || null)}
 
         <div className="kpi-grid" style={{ marginBottom: 20 }}>

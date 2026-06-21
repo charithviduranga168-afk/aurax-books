@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { StatusBar } from '../components/StatusBar';
 
 interface LineItem {
   product_id: string;
@@ -316,6 +317,7 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
           </div>
         </div>
 
+        <StatusBar steps={['Unpaid', 'Partial', 'Paid']} current={bill.status} />
         {flowBar(bill, selectedGrns[0] || null)}
 
         <div className="kpi-grid" style={{ marginBottom: 20 }}>

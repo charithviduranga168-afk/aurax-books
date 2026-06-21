@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
+import { StatusBar } from '../components/StatusBar';
 
 interface SoLine {
   id?: string;
@@ -278,26 +279,6 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
     doc.save(so.so_number + '.pdf');
   }
 
-  function statusPipeline(currentStatus: string) {
-    const currentIdx = STATUS_STEPS.indexOf(currentStatus);
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        {STATUS_STEPS.map((step, i) => {
-          const done = currentStatus === 'Cancelled' ? false : i <= currentIdx;
-          const isCurrent = i === currentIdx && currentStatus !== 'Cancelled';
-          return (
-            <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: currentStatus === 'Cancelled' && step === 'Draft' ? '#fef3f2' : done ? (isCurrent ? 'var(--brand)' : 'var(--green-bg)') : 'var(--bg3)', color: currentStatus === 'Cancelled' && step === 'Draft' ? '#f04438' : done ? (isCurrent ? '#fff' : '#12b76a') : 'var(--text3)', border: `1px solid ${currentStatus === 'Cancelled' && step === 'Draft' ? '#fecdca' : done ? (isCurrent ? 'transparent' : 'var(--green)') : 'var(--border)'}` }}>
-                {currentStatus === 'Cancelled' && step === 'Draft' ? '✕ Cancelled' : step}
-              </div>
-              {i < STATUS_STEPS.length - 1 && <span style={{ color: 'var(--text3)', fontSize: '12px' }}>→</span>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
   const canEdit = (so: any) => so.status === 'Draft';
   const canDelete = (so: any) => so.status === 'Draft';
   const canConfirm = (so: any) => so.status === 'Draft';
@@ -344,7 +325,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
               <div style={{ marginBottom: 12 }}>
                 <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: (STATUS_COLOR[selected.status] || '#6b7280') + '18', color: STATUS_COLOR[selected.status] || '#6b7280' }}>{selected.status}</span>
               </div>
-              {statusPipeline(selected.status)}
+              <StatusBar steps={STATUS_STEPS} current={selected.status} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text2)' }}>
                 <span><strong>Customer:</strong> {selected.customer_name}</span>
                 <span><strong>Date:</strong> {selected.date}</span>

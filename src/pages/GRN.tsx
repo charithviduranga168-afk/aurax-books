@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
+import { StatusBar } from '../components/StatusBar';
 
 interface GrnLine {
   id?: string;
@@ -356,6 +357,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
           </div>
         </div>
 
+        <StatusBar steps={['Draft', 'Partial', 'Received']} current={grn.status} />
         {flowBar(grn.bill_number, grn.grn_number, grn.status)}
 
         <div className="kpi-grid" style={{ marginBottom: 20 }}>

@@ -25,6 +25,7 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 - **Navigation**: `nav(p: Page)` sets page + moduleMode; `exitModule()` goes back to dashboard
 - **Sidebar**: always folded (icon-only, no labels) by default — `sidebarOpen` starts `false`, hamburger in topbar can expand it. Never uses `module-hidden`. White background, section labels uppercase gray, active pill = `#ede9fe` bg + `#7c3aed` text
 - **Icons**: Dual system — `ICON_PATHS` dict in App.tsx + `NavIcon` for sidebar navigation icons (SVG stroke, size 15); `lucide-react` for all in-page icons (empty states, KPI cards, search inputs, action buttons, status badges, contact chips). All emojis have been removed from the codebase.
+- **StatusBar**: Shared Odoo-style chevron pipeline component at `src/components/StatusBar.tsx`. Props: `steps: string[]`, `current: string`. Completed steps = lavender bg + purple check; current step = purple gradient; future = gray; cancelled = all gray + red "Cancelled" appended. Used in: SalesOrders, PurchaseOrders, Invoices, Bills, GRN, JournalEntries.
 - **CSS vars**: `--brand: #7c3aed`, `--bg: #f7f8fc`, `--sidebar-w: 216px`
 - **Font**: Plus Jakarta Sans (login page), Inter (rest of app)
 

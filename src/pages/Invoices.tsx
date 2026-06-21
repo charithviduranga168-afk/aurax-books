@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import md5 from 'md5';
+import { StatusBar } from '../components/StatusBar';
 
 interface Invoice {
   id: string;
@@ -348,6 +349,8 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
             </div>
           </div>
         </div>
+
+        <StatusBar steps={['Unpaid', 'Partial', 'Paid']} current={selected.status === 'Overdue' ? 'Unpaid' : selected.status} />
 
         {/* KPI row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>

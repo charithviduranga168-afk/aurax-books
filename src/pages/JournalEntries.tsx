@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Check, X, Search, BookOpen } from 'lucide-react';
+import { StatusBar } from '../components/StatusBar';
 
 interface JournalLine {
   account_id: string;
@@ -425,6 +426,8 @@ export default function JournalEntries() {
             <div style={{ fontSize: 13, color: 'var(--text2)' }}>{fmtDate(e.date)}</div>
           </div>
         </div>
+
+        <StatusBar steps={['Draft', 'Posted']} current={e.status} />
 
         {/* KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
