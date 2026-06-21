@@ -4,6 +4,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
+import { Package, List } from 'lucide-react';
 
 interface PoLine {
   id?: string;
@@ -406,6 +408,12 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
             </div>
           </div>
         </div>
+
+        {/* Smart buttons */}
+        <SmartButtons>
+          <SmartButton icon={<Package size={18} />} value={linkedGrns.length} label="Receipts (GRN)" />
+          <SmartButton icon={<List size={18} />} value={selectedLines.length} label="Line Items" />
+        </SmartButtons>
 
         <StatusBar steps={['Draft', 'Sent', 'Confirmed', 'Partial', 'Received']} current={po.status} />
         {flowBar(po.po_number, linkedGrns[0] || null)}

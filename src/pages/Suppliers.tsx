@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { ClipboardList, FileText, CreditCard, Wallet } from 'lucide-react';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
 
 interface Supplier {
   id: string;
@@ -158,6 +160,14 @@ export default function Suppliers() {
             </div>
           </div>
         </div>
+
+        {/* Smart buttons */}
+        <SmartButtons>
+          <SmartButton icon={<ClipboardList size={18} />} value={detailPOs.length} label="Purchase Orders" />
+          <SmartButton icon={<FileText size={18} />} value={detailBills.length} label="Bills" />
+          <SmartButton icon={<CreditCard size={18} />} value={detailPayments.length} label="Payments" />
+          <SmartButton icon={<Wallet size={18} />} value={fmt(detailKpi.outstanding)} label="Outstanding" forceActive={detailKpi.outstanding > 0} />
+        </SmartButtons>
 
         {/* KPI row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>

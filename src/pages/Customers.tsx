@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { Mail, Phone, MapPin, Globe, FileText, CreditCard, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe, FileText, CreditCard, Users, ShoppingCart, Receipt, Wallet } from 'lucide-react';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
 
 interface Customer {
   id: string;
@@ -79,6 +80,7 @@ function CustomerDetail({
   const [tab, setTab] = useState<'invoices' | 'payments'>('invoices');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [portalEmail, setPortalEmail] = useState(customer.email || '');
   const [portalMsg, setPortalMsg] = useState('');
@@ -90,9 +92,11 @@ function CustomerDetail({
     Promise.all([
       supabase.from('invoices').select('id,invoice_number,invoice_date,total,paid,status').eq('customer_id', customer.id).order('invoice_date', { ascending: false }).limit(20),
       supabase.from('receipts').select('id,receipt_number,receipt_date,amount,payment_method').eq('customer_id', customer.id).order('receipt_date', { ascending: false }).limit(20),
-    ]).then(([inv, rec]) => {
+      supabase.from('sales_orders').select('id,so_number,date,total,status').eq('customer_id', customer.id).order('date', { ascending: false }).limit(20),
+    ]).then(([inv, rec, sos]) => {
       setInvoices(inv.data || []);
       setReceipts(rec.data || []);
+      setSalesOrders(sos.data || []);
       setLoadingData(false);
     });
   }, [customer.id]);
@@ -171,6 +175,15 @@ function CustomerDetail({
           </div>
         )}
       </div>
+
+      {/* Smart buttons */}
+      <SmartButtons>
+        <SmartButton icon={<ShoppingCart size={18} />} value={salesOrders.length} label="Sales Orders" />
+        <SmartButton icon={<FileText size={18} />} value={invoices.length} label="Invoices" />
+        <SmartButton icon={<Receipt size={18} />} value={receipts.length} label="Receipts" />
+        <SmartButton icon={<Wallet size={18} />} value={fmt(outstanding)} label="Outstanding" forceActive={outstanding > 0} />
+        <SmartButton icon={<CreditCard size={18} />} value={fmt(customer.credit_limit)} label="Credit Limit" forceActive={customer.credit_limit > 0} />
+      </SmartButtons>
 
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>

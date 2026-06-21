@@ -4,6 +4,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
+import { FileText, List } from 'lucide-react';
 
 interface SoLine {
   id?: string;
@@ -325,7 +327,6 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
               <div style={{ marginBottom: 12 }}>
                 <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: (STATUS_COLOR[selected.status] || '#6b7280') + '18', color: STATUS_COLOR[selected.status] || '#6b7280' }}>{selected.status}</span>
               </div>
-              <StatusBar steps={STATUS_STEPS} current={selected.status} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text2)' }}>
                 <span><strong>Customer:</strong> {selected.customer_name}</span>
                 <span><strong>Date:</strong> {selected.date}</span>
@@ -349,6 +350,14 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Smart buttons */}
+        <SmartButtons>
+          <SmartButton icon={<FileText size={18} />} value={linkedInvoice ? 1 : 0} label="Invoice" />
+          <SmartButton icon={<List size={18} />} value={selectedLines.length} label="Line Items" />
+        </SmartButtons>
+
+        <StatusBar steps={STATUS_STEPS} current={selected.status} />
 
         {/* KPI row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
