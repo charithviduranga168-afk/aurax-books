@@ -6,6 +6,7 @@ import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
 import { Package, List } from 'lucide-react';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface PoLine {
   id?: string;
@@ -214,6 +215,7 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
     await supabase.from('purchase_orders').update({ status: newStatus }).eq('id', po.id);
     setSelected((prev: any) => prev?.id === po.id ? { ...prev, status: newStatus } : prev);
     setPos(prev => prev.map(p => p.id === po.id ? { ...p, status: newStatus } : p));
+    void logChatter('purchase_order', po.id, `Status changed to ${newStatus}`);
   }
 
   async function receiveProducts(po: any) {
@@ -495,6 +497,8 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
             </div>
           </div>
         )}
+
+        <Chatter recordType="purchase_order" recordId={selected.id} />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { Mail, Phone, MapPin, Globe, FileText, CreditCard, Users, ShoppingCart, Receipt, Wallet } from 'lucide-react';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
+import { Chatter } from '../components/Chatter';
 
 interface Customer {
   id: string;
@@ -276,6 +277,8 @@ function CustomerDetail({
           )
         )}
       </div>
+
+      <Chatter recordType="customer" recordId={customer.id} />
     </div>
   );
 }

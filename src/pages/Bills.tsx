@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { StatusBar } from '../components/StatusBar';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface LineItem {
   product_id: string;
@@ -279,6 +280,7 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
   async function updateBillStatus(id: string, newStatus: string) {
     await supabase.from('bills').update({ status: newStatus }).eq('id', id);
     setSelected((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev);
+    void logChatter('bill', id, `Status changed to ${newStatus}`);
     loadData();
   }
 
@@ -384,6 +386,8 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
             <strong>Notes:</strong> {bill.notes}
           </div>
         )}
+
+        <Chatter recordType="bill" recordId={selected.id} />
       </div>
     );
   }

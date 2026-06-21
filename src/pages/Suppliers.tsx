@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { ClipboardList, FileText, CreditCard, Wallet } from 'lucide-react';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
+import { Chatter } from '../components/Chatter';
 
 interface Supplier {
   id: string;
@@ -261,6 +262,8 @@ export default function Suppliers() {
             )
           )}
         </div>
+
+        <Chatter recordType="supplier" recordId={selected.id} />
       </div>
     );
   }

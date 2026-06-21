@@ -6,6 +6,7 @@ import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
 import { FileText, List } from 'lucide-react';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface SoLine {
   id?: string;
@@ -217,6 +218,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
   async function updateStatus(so: any, newStatus: string) {
     await supabase.from('sales_orders').update({ status: newStatus }).eq('id', so.id);
     setSelected((prev: any) => prev?.id === so.id ? { ...prev, status: newStatus } : prev);
+    void logChatter('sales_order', so.id, `Status changed to ${newStatus}`);
     loadAll();
   }
 
@@ -428,6 +430,8 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
             </div>
           )}
         </div>
+
+        <Chatter recordType="sales_order" recordId={selected.id} />
       </div>
     );
   }

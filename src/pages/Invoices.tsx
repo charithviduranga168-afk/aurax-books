@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import md5 from 'md5';
 import { StatusBar } from '../components/StatusBar';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface Invoice {
   id: string;
@@ -207,6 +208,7 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
   async function updateInvoiceStatus(id: string, newStatus: string) {
     await supabase.from('invoices').update({ status: newStatus }).eq('id', id);
     setSelected((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev);
+    void logChatter('invoice', id, `Status changed to ${newStatus}`);
     loadData();
   }
 
@@ -430,6 +432,8 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
             <strong>Notes:</strong> {selected.notes}
           </div>
         )}
+
+        <Chatter recordType="invoice" recordId={selected.id} />
       </div>
     );
   }

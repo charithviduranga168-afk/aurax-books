@@ -27,6 +27,7 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 - **Icons**: Dual system — `ICON_PATHS` dict in App.tsx + `NavIcon` for sidebar navigation icons (SVG stroke, size 15); `lucide-react` for all in-page icons (empty states, KPI cards, search inputs, action buttons, status badges, contact chips). All emojis have been removed from the codebase.
 - **StatusBar**: Shared Odoo-style chevron pipeline component at `src/components/StatusBar.tsx`. Props: `steps: string[]`, `current: string`. Completed steps = lavender bg + purple check; current step = purple gradient; future = gray; cancelled = all gray + red "Cancelled" appended. Used in: SalesOrders, PurchaseOrders, Invoices, Bills, GRN, JournalEntries.
 - **SmartButton**: Shared Odoo-style stat button at `src/components/SmartButton.tsx`. Props: `icon`, `value`, `label`, `onClick?`, `forceActive?`. Active (value > 0) = lavender bg + purple border + purple text. Inactive = gray. Used in: Customers, Suppliers, SalesOrders, PurchaseOrders. `SmartButtons` is the row wrapper.
+- **Chatter**: Odoo-style activity log at `src/components/Chatter.tsx`. Props: `recordType: string`, `recordId: string`. Two exports: `Chatter` component (renders note input + timeline) and `logChatter(recordType, recordId, message)` helper (fire-and-forget, logs system events). Timeline shows notes (lavender, user-authored) vs logs (gray italic, auto-generated). Gracefully hides if `chatter` Supabase table doesn't exist (error code 42P01). Placed at bottom of every transaction/entity detail view. **Supabase table required** — see SQL comment in Chatter.tsx. Used in: Customers, Suppliers, SalesOrders, PurchaseOrders, Invoices, Bills, GRN, JournalEntries.
 - **CSS vars**: `--brand: #7c3aed`, `--bg: #f7f8fc`, `--sidebar-w: 216px`
 - **Font**: Plus Jakarta Sans (login page), Inter (rest of app)
 
@@ -89,6 +90,17 @@ Every transaction type now has status reversal buttons:
 | JournalEntries | ✓ Posted → Draft | ✓ Draft/Posted → Cancelled |
 | QualityControl | ✓ any → pending (reset to initial) | ✓ any non-cancelled → cancelled |
 | Manufacturing | ✓ Completed/Cancelled → Planned (list row button) | ✓ already existed |
+
+### Odoo-style redesign — step by step
+
+| Step | Feature | Status |
+|------|---------|--------|
+| 1 | Smart Buttons (stat buttons) | ✓ Done — Customers, Suppliers, SalesOrders, PurchaseOrders |
+| 2 | Chatter / activity log | ✓ Done — all 8 modules (see Architecture) |
+| 3 | List view filter bar (Odoo-style quick filters) | Pending |
+| 4 | Kanban view toggle (SalesOrders, Projects, Manufacturing, HR) | Pending |
+| 5 | Detail form two-column layout | Pending |
+| 6 | Action menu (gear dropdown: Print, Duplicate, Archive, Export) | Pending |
 
 ### Other potential tasks:
 - Customer portal improvements

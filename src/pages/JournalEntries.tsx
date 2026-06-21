@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Check, X, Search, BookOpen } from 'lucide-react';
 import { StatusBar } from '../components/StatusBar';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface JournalLine {
   account_id: string;
@@ -229,6 +230,7 @@ export default function JournalEntries() {
     if (!confirm(`Return ${entry.entry_number} to Draft? This will allow editing again.`)) return;
     await supabase.from('journal_entries').update({ status: 'Draft' }).eq('id', entry.id);
     if (view === 'detail' && selected?.id === entry.id) setSelected({ ...selected, status: 'Draft' });
+    void logChatter('journal_entry', entry.id, 'Status changed to Draft');
     loadData();
   }
 
@@ -236,6 +238,7 @@ export default function JournalEntries() {
     if (!confirm(`Cancel ${entry.entry_number}? This cannot be undone.`)) return;
     await supabase.from('journal_entries').update({ status: 'Cancelled' }).eq('id', entry.id);
     if (view === 'detail' && selected?.id === entry.id) setSelected({ ...selected, status: 'Cancelled' });
+    void logChatter('journal_entry', entry.id, 'Status changed to Cancelled');
     loadData();
   }
 
@@ -504,6 +507,8 @@ export default function JournalEntries() {
             </table>
           )}
         </div>
+
+        <Chatter recordType="journal_entry" recordId={selected.id} />
       </div>
     );
   }

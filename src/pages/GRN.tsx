@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
+import { Chatter, logChatter } from '../components/Chatter';
 
 interface GrnLine {
   id?: string;
@@ -197,6 +198,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
     showConfirm(`Return ${grn.grn_number} to Draft? Note: stock quantities will NOT be reversed automatically.`, async () => {
       await supabase.from('grn_headers').update({ status: 'Draft' }).eq('id', grn.id);
       setSelected((prev: any) => prev?.id === grn.id ? { ...prev, status: 'Draft' } : prev);
+      void logChatter('grn', grn.id, 'Status changed to Draft');
       loadAll();
     });
   }
@@ -205,6 +207,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
     showConfirm(`Cancel ${grn.grn_number}? This cannot be undone.`, async () => {
       await supabase.from('grn_headers').update({ status: 'Cancelled' }).eq('id', grn.id);
       setSelected((prev: any) => prev?.id === grn.id ? { ...prev, status: 'Cancelled' } : prev);
+      void logChatter('grn', grn.id, 'Status changed to Cancelled');
       loadAll();
     });
   }
@@ -429,6 +432,8 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
             </div>
           </div>
         )}
+
+        <Chatter recordType="grn" recordId={selected.id} />
       </div>
     );
   }
