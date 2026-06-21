@@ -72,10 +72,9 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
 
     if (error) {
       const code = (error as any).code;
-      if (code === '42P01') {
+      if (code === '42P01' || code === 'PGRST205') {
         setTableExists(false);
       } else {
-        // Table exists but some other error — still show the UI
         setTableExists(true);
         console.error('[Chatter] loadMessages error:', error);
       }
@@ -107,7 +106,7 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
 
       if (insertError) {
         const code = (insertError as any).code;
-        if (code === '42P01') {
+        if (code === '42P01' || code === 'PGRST205') {
           setTableExists(false);
         } else {
           setErrorMsg(`Error: ${insertError.message} (${code})`);
