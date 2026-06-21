@@ -21,9 +21,9 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 ## Architecture
 
 - **Non-router SPA** — `App.tsx` holds `page` state + `userType` + `moduleMode`
-- **Module mode**: when `page !== 'dashboard'`, sidebar slides to width 0 (`moduleMode = true`), topbar shows ← back button + breadcrumb
+- **Module mode**: when `page !== 'dashboard'`, `moduleMode = true`, topbar shows ← back button + breadcrumb. Sidebar does NOT hide — it stays in icon-only state.
 - **Navigation**: `nav(p: Page)` sets page + moduleMode; `exitModule()` goes back to dashboard
-- **Sidebar**: white, 216px wide, section labels uppercase gray, active pill = `#ede9fe` bg + `#7c3aed` text
+- **Sidebar**: always folded (icon-only, no labels) by default — `sidebarOpen` starts `false`, hamburger in topbar can expand it. Never uses `module-hidden`. White background, section labels uppercase gray, active pill = `#ede9fe` bg + `#7c3aed` text
 - **Icons**: `ICON_PATHS` dict in App.tsx + `NavIcon` component (SVG stroke icons, size 15)
 - **CSS vars**: `--brand: #7c3aed`, `--bg: #f7f8fc`, `--sidebar-w: 216px`
 - **Font**: Plus Jakarta Sans (login page), Inter (rest of app)
