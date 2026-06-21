@@ -17,6 +17,25 @@ const SOURCE_BADGE: Record<string, string> = {
   Manufacturing: 'badge-purple',
 };
 
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#0891b2'];
+  const bg = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  const initials = name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || '?';
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.38, fontWeight: 700, flexShrink: 0 }}>{initials}</div>;
+}
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      {label}
+    </button>
+  );
+}
+
+const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
 export default function Inventory() {
   const [products, setProducts] = useState<any[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -28,6 +47,9 @@ export default function Inventory() {
 
   const [moveSearch, setMoveSearch] = useState('');
   const [moveSource, setMoveSource] = useState('');
+
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selected, setSelected] = useState<any>(null);
 
   useEffect(() => {
     loadAll();
@@ -154,9 +176,6 @@ export default function Inventory() {
   const lowStock = products.filter((p) => p.type !== 'Service' && p.stock_qty <= p.reorder_level);
   const stockValue = products.reduce((s, p) => s + (p.stock_qty || 0) * (p.cost_price || 0), 0);
 
-  const fmt = (n: number) =>
-    'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
-
   const filteredProducts = products.filter((p) => {
     const matchSearch =
       (p.name || '').toLowerCase().includes(stockSearch.toLowerCase()) ||
@@ -173,6 +192,105 @@ export default function Inventory() {
     return matchSearch && matchSource;
   });
 
+  // ── DETAIL VIEW ──
+  if (view === 'detail' && selected) {
+    const p = selected;
+    const isLow = p.type !== 'Service' && p.stock_qty <= p.reorder_level;
+    const stockVal = (p.stock_qty || 0) * (p.cost_price || 0);
+    const productMovements = movements.filter(m => m.product === p.name);
+
+    return (
+      <div>
+        <BackBtn label="Back to Inventory" onClick={() => { setView('list'); setSelected(null); }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 24, padding: '24px 28px' }}>
+          <Avatar name={p.name} size={56} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)', marginBottom: 4 }}>{p.name}</div>
+            {p.product_code && <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 8 }}>{p.product_code}</div>}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {p.category && (
+                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#ede9fe', color: '#7c3aed' }}>{p.category}</span>
+              )}
+              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' }}>{p.type}</span>
+              {p.unit && <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#f3f4f6', color: 'var(--text2)' }}>{p.unit}</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+          {[
+            { label: 'Current Stock', value: `${p.stock_qty || 0} ${p.unit || ''}`.trim(), color: '#2563eb' },
+            { label: 'Reorder Level', value: `${p.reorder_level || 0} ${p.unit || ''}`.trim(), color: '#d97706' },
+            { label: 'Stock Value', value: fmt(stockVal), color: '#059669' },
+            { label: 'Status', value: p.type === 'Service' ? 'Service' : isLow ? 'Low Stock' : 'OK', color: p.type === 'Service' ? '#0891b2' : isLow ? '#dc2626' : '#059669' },
+          ].map(k => (
+            <div key={k.label} style={{ background: '#fff', border: '1px solid #ede9f7', borderRadius: 12, padding: '16px 20px' }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{k.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Notes */}
+        {p.notes && (
+          <div className="card" style={{ marginBottom: 24, padding: '16px 20px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Notes</div>
+            <div style={{ fontSize: 14, color: 'var(--text1)', lineHeight: 1.6 }}>{p.notes}</div>
+          </div>
+        )}
+
+        {/* Movement history */}
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <h3>Movement History</h3>
+          </div>
+          {productMovements.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📜</div>
+              <h3>No movements recorded yet</h3>
+              <p>Stock movements will appear here once GRNs, invoices, or production orders involve this product.</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Source</th>
+                  <th>Reference</th>
+                  <th>Direction</th>
+                  <th>Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productMovements.map((m, i) => (
+                  <tr key={i}>
+                    <td style={{ color: 'var(--text2)' }}>{fmtDate(m.date)}</td>
+                    <td>
+                      <span className={`badge ${SOURCE_BADGE[m.source]}`}>{m.source}</span>
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--brand)' }}>{m.reference}</td>
+                    <td>
+                      <span className={`badge ${m.direction === 'IN' ? 'badge-green' : 'badge-red'}`}>
+                        {m.direction === 'IN' ? '⬇ IN' : '⬆ OUT'}
+                      </span>
+                    </td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                      {m.qty} {m.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST VIEW ──
   return (
     <div>
       <div className="page-header">
@@ -278,7 +396,7 @@ export default function Inventory() {
                 {filteredProducts.map((p) => {
                   const low = p.type !== 'Service' && p.stock_qty <= p.reorder_level;
                   return (
-                    <tr key={p.id}>
+                    <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => { setSelected(p); setView('detail'); }}>
                       <td style={{ fontWeight: 600 }}>{p.name}</td>
                       <td style={{ color: 'var(--text2)' }}>{p.category || '—'}</td>
                       <td style={{ color: 'var(--text2)' }}>{p.type}</td>

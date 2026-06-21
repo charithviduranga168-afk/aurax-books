@@ -19,6 +19,21 @@ const emptyLine = (): JournalLine => ({
   credit: 0,
 });
 
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      {label}
+    </button>
+  );
+}
+
+const fmt = (n: number) =>
+  'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
+const STATUS_COLOR: Record<string, string> = { Draft: '#6b7280', Posted: '#059669' };
+
 export default function JournalEntries() {
   const [entries, setEntries] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -34,9 +49,19 @@ export default function JournalEntries() {
   });
   const [lines, setLines] = useState<JournalLine[]>([emptyLine(), emptyLine()]);
 
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selected, setSelected] = useState<any>(null);
+  const [detailLines, setDetailLines] = useState<any[]>([]);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (view === 'detail' && selected) {
+      fetchDetailLines(selected.id);
+    }
+  }, [view, selected]);
 
   async function loadData() {
     const {
@@ -65,6 +90,14 @@ export default function JournalEntries() {
     setAccounts(coaRes.data || []);
     setCompany(settRes.data || {});
     setLoading(false);
+  }
+
+  async function fetchDetailLines(entryId: string) {
+    const { data } = await supabase
+      .from('journal_entry_lines')
+      .select('*')
+      .eq('journal_entry_id', entryId);
+    setDetailLines(data || []);
   }
 
   function generateEntryNumber(existing: any[]) {
@@ -184,6 +217,9 @@ export default function JournalEntries() {
       .from('journal_entries')
       .update({ status: 'Posted' })
       .eq('id', entry.id);
+    if (view === 'detail' && selected?.id === entry.id) {
+      setSelected({ ...selected, status: 'Posted' });
+    }
     loadData();
   }
 
@@ -195,6 +231,10 @@ export default function JournalEntries() {
       .delete()
       .eq('journal_entry_id', entry.id);
     await supabase.from('journal_entries').delete().eq('id', entry.id);
+    if (view === 'detail') {
+      setView('list');
+      setSelected(null);
+    }
     loadData();
   }
 
@@ -208,7 +248,7 @@ export default function JournalEntries() {
 
   function exportPDF(entry: any, lineItems: any[]) {
     const doc = new jsPDF();
-    const fmt = (n: number) =>
+    const fmtPDF = (n: number) =>
       (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
     doc.setFillColor(248, 249, 252);
@@ -286,10 +326,10 @@ export default function JournalEntries() {
       body: lineItems.map((l) => [
         l.account_name,
         l.description || '—',
-        l.debit > 0 ? fmt(l.debit) : '—',
-        l.credit > 0 ? fmt(l.credit) : '—',
+        l.debit > 0 ? fmtPDF(l.debit) : '—',
+        l.credit > 0 ? fmtPDF(l.credit) : '—',
       ]),
-      foot: [['', 'TOTAL', fmt(totalDebitVal), fmt(totalCreditVal)]],
+      foot: [['', 'TOTAL', fmtPDF(totalDebitVal), fmtPDF(totalCreditVal)]],
       headStyles: {
         fillColor: [79, 53, 200],
         textColor: 255,
@@ -320,7 +360,7 @@ export default function JournalEntries() {
     doc.setFontSize(9);
     doc.text(
       balanced
-        ? `Balanced — Debits = Credits = Rs. ${fmt(totalDebitVal)}`
+        ? `Balanced — Debits = Credits = Rs. ${fmtPDF(totalDebitVal)}`
         : 'Not Balanced — Debits ≠ Credits',
       67,
       finalY + 6.5,
@@ -339,15 +379,112 @@ export default function JournalEntries() {
     doc.save(entry.entry_number + '.pdf');
   }
 
-  const fmt = (n: number) =>
-    'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
-
   const filtered = entries.filter(
     (e) =>
       (e.entry_number || '').toLowerCase().includes(search.toLowerCase()) ||
       (e.description || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // ── DETAIL VIEW ──
+  if (view === 'detail' && selected) {
+    const e = entries.find(x => x.id === selected.id) || selected;
+    const dlTotalDebit = detailLines.reduce((s, l) => s + (l.debit || 0), 0);
+    const dlTotalCredit = detailLines.reduce((s, l) => s + (l.credit || 0), 0);
+    const dlBalanced = detailLines.length > 0 && Math.abs(dlTotalDebit - dlTotalCredit) < 0.01;
+
+    return (
+      <div>
+        <BackBtn label="Back to Journals" onClick={() => { setView('list'); setSelected(null); setDetailLines([]); }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24, padding: '24px 28px' }}>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--brand)', marginBottom: 6 }}>{e.entry_number}</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text1)', marginBottom: 4 }}>{e.description}</div>
+            {e.reference && <div style={{ fontSize: 13, color: 'var(--text3)' }}>Ref: {e.reference}</div>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: (STATUS_COLOR[e.status] || '#6b7280') + '18', color: STATUS_COLOR[e.status] || '#6b7280' }}>
+              {e.status}
+            </span>
+            <div style={{ fontSize: 13, color: 'var(--text2)' }}>{fmtDate(e.date)}</div>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+          {[
+            { label: 'Total Debit', value: fmt(e.total_debit), color: '#2563eb' },
+            { label: 'Total Credit', value: fmt(e.total_credit), color: '#059669' },
+            { label: 'Status', value: e.status, color: STATUS_COLOR[e.status] || '#6b7280' },
+            { label: 'Date', value: fmtDate(e.date), color: '#7c3aed' },
+          ].map(k => (
+            <div key={k.label} style={{ background: '#fff', border: '1px solid #ede9f7', borderRadius: 12, padding: '16px 20px' }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{k.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+          {e.status === 'Draft' && (
+            <button className="btn btn-secondary" onClick={() => postEntry(e)}>Post Entry</button>
+          )}
+          {e.status === 'Draft' && (
+            <button className="btn btn-danger" onClick={() => deleteEntry(e)}>Delete</button>
+          )}
+          <button className="btn btn-primary" onClick={() => handlePDF(e)}>PDF</button>
+        </div>
+
+        {/* Lines */}
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <h3>Journal Lines</h3>
+            {detailLines.length > 0 && (
+              <span style={{ fontSize: 13, fontWeight: 700, color: dlBalanced ? '#059669' : '#dc2626' }}>
+                {dlBalanced ? '✓ Balanced' : '✗ Out of Balance'}
+              </span>
+            )}
+          </div>
+          {detailLines.length === 0 ? (
+            <div className="empty-state"><p>Loading lines...</p></div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Description</th>
+                  <th style={{ textAlign: 'right' }}>Debit</th>
+                  <th style={{ textAlign: 'right' }}>Credit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailLines.map((l, i) => (
+                  <tr key={i}>
+                    <td style={{ fontWeight: 600 }}>{l.account_name}</td>
+                    <td style={{ color: 'var(--text2)', fontSize: 13 }}>{l.description || '—'}</td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{l.debit > 0 ? fmt(l.debit) : '—'}</td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{l.credit > 0 ? fmt(l.credit) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ fontWeight: 800, background: '#f8f7ff' }}>
+                  <td>TOTAL</td>
+                  <td></td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(dlTotalDebit)}</td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(dlTotalCredit)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST VIEW ──
   return (
     <div>
       <div className="page-header">
@@ -579,22 +716,20 @@ export default function JournalEntries() {
                 <th>Status</th>
                 <th>Total Debit</th>
                 <th>Total Credit</th>
-                <th>Actions</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((e) => (
-                <tr key={e.id}>
+                <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => { setSelected(e); setView('detail'); }}>
                   <td style={{ fontWeight: 700, color: 'var(--brand)' }}>
                     {e.entry_number}
                   </td>
-                  <td style={{ color: 'var(--text2)' }}>{e.date}</td>
+                  <td style={{ color: 'var(--text2)' }}>{fmtDate(e.date)}</td>
                   <td>{e.description}</td>
                   <td>
                     <span
-                      className={`badge ${
-                        e.status === 'Posted' ? 'badge-green' : 'badge-yellow'
-                      }`}
+                      style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: (STATUS_COLOR[e.status] || '#6b7280') + '18', color: STATUS_COLOR[e.status] || '#6b7280' }}
                     >
                       {e.status}
                     </span>
@@ -609,7 +744,7 @@ export default function JournalEntries() {
                   >
                     {fmt(e.total_credit)}
                   </td>
-                  <td>
+                  <td onClick={ev => ev.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {e.status === 'Draft' && (
                         <button

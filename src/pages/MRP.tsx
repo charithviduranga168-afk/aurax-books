@@ -41,6 +41,15 @@ function fmt(n: number, decimals = 2) {
   return (n || 0).toLocaleString('en-LK', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      {label}
+    </button>
+  );
+}
+
 export default function MRP() {
   const [tab, setTab] = useState(0);
   const [openPOs, setOpenPOs] = useState<OpenPO[]>([]);
@@ -52,7 +61,19 @@ export default function MRP() {
   const [calculated, setCalculated] = useState(false);
   const [lastRun, setLastRun] = useState<string | null>(null);
 
+  // Detail view state
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selectedPO, setSelectedPO] = useState<OpenPO | null>(null);
+  const [poRequirements, setPoRequirements] = useState<Requirement[]>([]);
+  const [loadingPO, setLoadingPO] = useState(false);
+
   useEffect(() => { loadInitial(); }, []);
+
+  useEffect(() => {
+    if (view === 'detail' && selectedPO) {
+      calcPORequirements(selectedPO);
+    }
+  }, [view, selectedPO]);
 
   async function loadInitial() {
     setLoading(true);
@@ -88,6 +109,52 @@ export default function MRP() {
 
     setReorderAlerts(alerts);
     setLoading(false);
+  }
+
+  async function calcPORequirements(po: OpenPO) {
+    if (!po.bom_id) {
+      setPoRequirements([]);
+      return;
+    }
+    setLoadingPO(true);
+
+    const [{ data: bomHeaders }, { data: bomLines }] = await Promise.all([
+      supabase.from('bom_headers').select('id,quantity_produced').eq('id', po.bom_id),
+      supabase.from('bom_lines').select('bom_id,component_id,component_name,qty_required,unit').eq('bom_id', po.bom_id),
+    ]);
+
+    const bomHeader = bomHeaders?.[0];
+    const qtyProduced = bomHeader?.quantity_produced || 1;
+    const multiplier = (po.qty_to_produce || 1) / qtyProduced;
+
+    const componentIds = [...new Set((bomLines || []).map(l => l.component_id).filter(Boolean))];
+    let stockMap: Record<string, number> = {};
+
+    if (componentIds.length > 0) {
+      const { data: stockProds } = await supabase
+        .from('products')
+        .select('id,stock_qty')
+        .in('id', componentIds);
+      (stockProds || []).forEach(p => { stockMap[p.id] = p.stock_qty || 0; });
+    }
+
+    const reqs: Requirement[] = (bomLines || []).map(line => {
+      const gross = Math.round((line.qty_required || 0) * multiplier * 100) / 100;
+      const stock = stockMap[line.component_id] ?? 0;
+      const net = Math.max(0, Math.round((gross - stock) * 100) / 100);
+      return {
+        component_id: line.component_id || '',
+        component_name: line.component_name,
+        unit: line.unit || '',
+        gross,
+        stock,
+        net,
+        po_numbers: [po.po_number],
+      };
+    }).sort((a, b) => b.net - a.net);
+
+    setPoRequirements(reqs);
+    setLoadingPO(false);
   }
 
   async function runMRP() {
@@ -204,6 +271,99 @@ export default function MRP() {
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text2)' }}>Loading...</div>;
 
+  // ── PO DETAIL VIEW ──
+  if (view === 'detail' && selectedPO) {
+    const poShortages = poRequirements.filter(r => r.net > 0).length;
+
+    return (
+      <div>
+        <BackBtn label="Back to MRP" onClick={() => { setView('list'); setSelectedPO(null); setPoRequirements([]); }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24, padding: '24px 28px' }}>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--brand)', marginBottom: 6 }}>{selectedPO.po_number}</div>
+            <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 8 }}>
+              <span style={{ fontWeight: 600 }}>Product: </span>{selectedPO.finished_product_name}
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text2)' }}>
+              <span style={{ fontWeight: 600 }}>Qty to Produce: </span>{selectedPO.qty_to_produce}
+            </div>
+          </div>
+          <span style={{ padding: '4px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: '#ede9fe', color: '#7c3aed' }}>
+            {selectedPO.status}
+          </span>
+        </div>
+
+        {/* BOM requirements */}
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <h3>Bill of Materials — Component Requirements</h3>
+          </div>
+          {loadingPO ? (
+            <div className="empty-state"><p>Calculating requirements...</p></div>
+          ) : !selectedPO.bom_id ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <h3>No BOM assigned</h3>
+              <p>This production order does not have a Bill of Materials assigned.</p>
+            </div>
+          ) : poRequirements.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <h3>No components found</h3>
+              <p>The BOM for this production order has no component lines.</p>
+            </div>
+          ) : (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Component</th>
+                    <th style={{ textAlign: 'right' }}>Gross Required</th>
+                    <th style={{ textAlign: 'right' }}>In Stock</th>
+                    <th style={{ textAlign: 'right' }}>Net Need</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {poRequirements.map((r, idx) => (
+                    <tr key={r.component_id || idx} style={{ background: r.net > 0 ? '#fff5f5' : undefined }}>
+                      <td style={{ fontWeight: 600 }}>{r.component_name}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(r.gross)}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: r.stock < r.gross ? '#dc2626' : '#16a34a', fontWeight: 600 }}>{fmt(r.stock)}</td>
+                      <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: r.net > 0 ? '#dc2626' : '#16a34a', fontSize: 15 }}>
+                        {r.net > 0 ? fmt(r.net) : '—'}
+                      </td>
+                      <td style={{ color: 'var(--text2)', fontSize: 13 }}>{r.unit || '—'}</td>
+                      <td>
+                        {r.net > 0 ? (
+                          <span style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                            ⚠ Shortage
+                          </span>
+                        ) : (
+                          <span style={{ background: '#dcfce7', color: '#16a34a', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                            ✓ OK
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ padding: '12px 20px', background: poShortages > 0 ? '#fff5f5' : '#f0fdf4', borderTop: '1px solid var(--border)', fontSize: 13, color: poShortages > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                {poRequirements.length} component{poRequirements.length !== 1 ? 's' : ''} needed
+                {poShortages > 0 ? `, ${poShortages} shortage${poShortages !== 1 ? 's' : ''} — order required before production` : ' — all materials sufficient'}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── LIST / MAIN VIEW ──
   return (
     <div>
       <div className="page-header">
@@ -214,7 +374,7 @@ export default function MRP() {
           </div>
         </div>
         <button className="btn btn-primary" onClick={runMRP} disabled={calculating}>
-          {calculating ? '⏳ Calculating...' : '▶ Run MRP'}
+          {calculating ? 'Calculating...' : '▶ Run MRP'}
         </button>
       </div>
 
@@ -240,6 +400,45 @@ export default function MRP() {
           Last calculated at {lastRun} — click Run MRP to refresh
         </div>
       )}
+
+      {/* Open Production Orders mini-table */}
+      <div className="table-wrap" style={{ marginBottom: 24 }}>
+        <div className="table-toolbar">
+          <h3>Open Production Orders</h3>
+        </div>
+        {openPOs.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">🏭</div>
+            <h3>No open production orders</h3>
+            <p>Create production orders in the Manufacturing module to plan material requirements.</p>
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>PO #</th>
+                <th>Product</th>
+                <th style={{ textAlign: 'right' }}>Qty to Produce</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {openPOs.map(po => (
+                <tr key={po.id} style={{ cursor: 'pointer' }} onClick={() => { setSelectedPO(po); setView('detail'); setPoRequirements([]); }}>
+                  <td style={{ fontWeight: 700, color: 'var(--brand)' }}>{po.po_number}</td>
+                  <td style={{ fontWeight: 600 }}>{po.finished_product_name}</td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{po.qty_to_produce}</td>
+                  <td>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#ede9fe', color: '#7c3aed' }}>{po.status}</span>
+                  </td>
+                  <td style={{ color: 'var(--text3)', fontSize: 18 }}>→</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border)', marginBottom: 24 }}>

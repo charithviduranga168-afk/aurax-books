@@ -30,6 +30,25 @@ const DEPARTMENTS = ['Management', 'Finance', 'Sales', 'Operations', 'IT', 'HR',
 
 const now = new Date();
 
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#0891b2'];
+  const bg = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  const initials = name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || '?';
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.38, fontWeight: 700, flexShrink: 0 }}>{initials}</div>;
+}
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      {label}
+    </button>
+  );
+}
+
+const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
 export default function HR() {
   const [activeTab, setActiveTab] = useState(0);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -37,6 +56,12 @@ export default function HR() {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Employee detail view
+  const [empView, setEmpView] = useState<'list' | 'detail'>('list');
+  const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
+  const [empDetailTab, setEmpDetailTab] = useState<'Payslips' | 'Leaves'>('Payslips');
+  const [empPayslips, setEmpPayslips] = useState<Payslip[]>([]);
 
   // Employee form
   const blankEmp = { first_name: '', last_name: '', nic: '', email: '', phone: '', department: '', designation: '', join_date: new Date().toISOString().split('T')[0], basic_salary: '', transport_allowance: '0', meal_allowance: '0', other_allowance: '0', bank_name: '', bank_account: '', status: 'active' };
@@ -63,6 +88,21 @@ export default function HR() {
   const showConfirm = (msg: string, onOk: () => void) => setDialog({ msg, type: 'confirm', onOk });
 
   useEffect(() => { loadAll(); }, []);
+
+  // Load payslips for selected employee in detail view
+  useEffect(() => {
+    if (empView === 'detail' && selectedEmp) {
+      const empPs = payslips.filter(ps => ps.employee_id === selectedEmp.id);
+      if (empPs.length > 0) {
+        setEmpPayslips(empPs);
+      } else {
+        // Fetch all payslips for this employee across all runs
+        supabase.from('payslips').select('*').eq('employee_id', selectedEmp.id).order('year', { ascending: false }).then(({ data }) => {
+          setEmpPayslips(data || []);
+        });
+      }
+    }
+  }, [empView, selectedEmp]);
 
   async function loadAll() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,6 +167,10 @@ export default function HR() {
   async function deleteEmployee(id: string) {
     showConfirm('Delete this employee? This will also remove their payslips and leave records.', async () => {
       await supabase.from('employees').delete().eq('id', id);
+      if (empView === 'detail' && selectedEmp?.id === id) {
+        setEmpView('list');
+        setSelectedEmp(null);
+      }
       loadAll();
     });
   }
@@ -213,8 +257,6 @@ export default function HR() {
     await supabase.from('leave_requests').update({ status }).eq('id', id);
     loadAll();
   }
-
-  const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
   function printPayslip(ps: Payslip, run: PayrollRun) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -413,6 +455,7 @@ export default function HR() {
 
     doc.save(`Payslip_${ps.emp_number}_${MONTHS[run.month-1]}_${run.year}.pdf`);
   }
+
   const tabStyle = (i: number): React.CSSProperties => ({
     padding: '8px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px',
     fontWeight: activeTab === i ? 700 : 500, background: activeTab === i ? 'var(--brand)' : 'transparent',
@@ -428,6 +471,216 @@ export default function HR() {
   const statusBg   = (s: string) => s === 'approved' ? 'rgba(34,197,94,0.1)' : s === 'rejected' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
 
   if (loading) return <div className="empty-state"><p>Loading...</p></div>;
+
+  // ── EMPLOYEE DETAIL VIEW ──
+  if (activeTab === 0 && empView === 'detail' && selectedEmp) {
+    const emp = employees.find(e => e.id === selectedEmp.id) || selectedEmp;
+    const fullName = `${emp.first_name} ${emp.last_name}`.trim();
+    const gross = emp.basic_salary + (emp.transport_allowance || 0) + (emp.meal_allowance || 0) + (emp.other_allowance || 0);
+    const empLeaves = leaves.filter(l => l.employee_id === emp.id);
+
+    return (
+      <div>
+        {dialog && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="card" style={{ width: 380, padding: '28px 24px' }}>
+              <p style={{ margin: '0 0 20px', fontSize: '14px', lineHeight: 1.6 }}>{dialog.msg}</p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                {dialog.type === 'confirm' && <button className="btn btn-danger" onClick={() => { dialog.onOk?.(); setDialog(null); }}>Confirm</button>}
+                <button className="btn btn-secondary" onClick={() => setDialog(null)}>{dialog.type === 'alert' ? 'OK' : 'Cancel'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="page-header">
+          <div>
+            <div className="page-title">HR & Payroll</div>
+            <div className="page-sub">Manage employees, run monthly payroll, track leaves</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg2)', padding: 4, borderRadius: 8, width: 'fit-content' }}>
+          {TABS.map((t, i) => <button key={t} style={tabStyle(i)} onClick={() => { setActiveTab(i); if (i !== 0) { setEmpView('list'); setSelectedEmp(null); } }}>{t}</button>)}
+        </div>
+
+        <BackBtn label="Back to Employees" onClick={() => { setEmpView('list'); setSelectedEmp(null); }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24, padding: '24px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Avatar name={fullName} size={64} />
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text1)', marginBottom: 4 }}>{fullName}</div>
+              <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 8 }}>{emp.emp_number}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {emp.department && <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#ede9fe', color: '#7c3aed' }}>{emp.department}</span>}
+                {emp.designation && <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#f0f9ff', color: '#0891b2' }}>{emp.designation}</span>}
+                <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: emp.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(100,100,100,0.1)', color: emp.status === 'active' ? '#16a34a' : 'var(--text3)' }}>
+                  {emp.status}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => {
+              setEditEmpId(emp.id);
+              setEmpForm({ first_name: emp.first_name, last_name: emp.last_name, nic: emp.nic || '', email: emp.email || '', phone: emp.phone || '', department: emp.department || '', designation: emp.designation || '', join_date: emp.join_date || '', basic_salary: String(emp.basic_salary), transport_allowance: String(emp.transport_allowance || 0), meal_allowance: String(emp.meal_allowance || 0), other_allowance: String(emp.other_allowance || 0), bank_name: emp.bank_name || '', bank_account: emp.bank_account || '', status: emp.status });
+              setShowEmpForm(true);
+              setEmpView('list');
+              setSelectedEmp(null);
+            }}>Edit</button>
+            <button className="btn btn-danger btn-sm" onClick={() => deleteEmployee(emp.id)}>Delete</button>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+          {[
+            { label: 'Basic Salary', value: fmt(emp.basic_salary), color: '#7c3aed' },
+            { label: 'Gross Salary', value: fmt(gross), color: '#2563eb' },
+            { label: 'Join Date', value: fmtDate(emp.join_date), color: '#d97706' },
+            { label: 'Status', value: emp.status === 'active' ? 'Active' : 'Inactive', color: emp.status === 'active' ? '#059669' : '#6b7280' },
+          ].map(k => (
+            <div key={k.label} style={{ background: '#fff', border: '1px solid #ede9f7', borderRadius: 12, padding: '16px 20px' }}>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{k.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Info grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+          {/* Contact */}
+          <div className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Contact</div>
+            {[
+              { label: 'Email', value: emp.email || '—' },
+              { label: 'Phone', value: emp.phone || '—' },
+              { label: 'NIC', value: emp.nic || '—' },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 13 }}>
+                <span style={{ color: 'var(--text3)', fontWeight: 600 }}>{row.label}</span>
+                <span style={{ color: 'var(--text1)' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+          {/* Bank */}
+          <div className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>Bank Details</div>
+            {[
+              { label: 'Bank Name', value: emp.bank_name || '—' },
+              { label: 'Account No.', value: emp.bank_account || '—' },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 13 }}>
+                <span style={{ color: 'var(--text3)', fontWeight: 600 }}>{row.label}</span>
+                <span style={{ color: 'var(--text1)' }}>{row.value}</span>
+              </div>
+            ))}
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '14px 0 10px' }}>Allowances</div>
+            {[
+              { label: 'Transport', value: fmt(emp.transport_allowance || 0) },
+              { label: 'Meal', value: fmt(emp.meal_allowance || 0) },
+              { label: 'Other', value: fmt(emp.other_allowance || 0) },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                <span style={{ color: 'var(--text3)', fontWeight: 600 }}>{row.label}</span>
+                <span style={{ color: 'var(--text1)' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #ede9f7', marginBottom: 20 }}>
+          {(['Payslips', 'Leaves'] as const).map(t => (
+            <button key={t} onClick={() => setEmpDetailTab(t)} style={{ padding: '8px 18px', border: 'none', background: 'none', cursor: 'pointer', fontWeight: empDetailTab === t ? 700 : 500, color: empDetailTab === t ? 'var(--brand)' : 'var(--text2)', borderBottom: empDetailTab === t ? '2px solid var(--brand)' : '2px solid transparent', fontSize: 14 }}>{t}</button>
+          ))}
+        </div>
+
+        {empDetailTab === 'Payslips' && (
+          <div className="table-wrap">
+            {empPayslips.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">💰</div>
+                <h3>No payslips yet</h3>
+                <p>Payslips will appear here after payroll runs that include this employee.</p>
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Month / Year</th>
+                    <th style={{ textAlign: 'right' }}>Gross</th>
+                    <th style={{ textAlign: 'right' }}>EPF</th>
+                    <th style={{ textAlign: 'right' }}>Net</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empPayslips.map(ps => {
+                    const run = payrollRuns.find(r => r.id === ps.payroll_run_id);
+                    return (
+                      <tr key={ps.id}>
+                        <td style={{ fontWeight: 600 }}>{MONTHS[(ps.month || 1) - 1]} {ps.year}</td>
+                        <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmt(ps.gross_salary)}</td>
+                        <td style={{ textAlign: 'right', color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>-{fmt(ps.epf_employee)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>{fmt(ps.net_salary)}</td>
+                        <td>
+                          {run && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => printPayslip(ps, run)}>Print</button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {empDetailTab === 'Leaves' && (
+          <div className="table-wrap">
+            {empLeaves.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">📅</div>
+                <h3>No leave requests</h3>
+                <p>Leave requests for this employee will appear here.</p>
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th style={{ textAlign: 'center' }}>Days</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empLeaves.map(l => (
+                    <tr key={l.id}>
+                      <td style={{ fontWeight: 600 }}>{l.leave_type}</td>
+                      <td style={{ color: 'var(--text2)', fontSize: 13 }}>{fmtDate(l.from_date)}</td>
+                      <td style={{ color: 'var(--text2)', fontSize: 13 }}>{fmtDate(l.to_date)}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>{l.days}</td>
+                      <td>
+                        <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusBg(l.status), color: statusColor(l.status) }}>
+                          {l.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -529,7 +782,7 @@ export default function HR() {
                   {filteredEmps.map(emp => {
                     const gross = emp.basic_salary + (emp.transport_allowance || 0) + (emp.meal_allowance || 0) + (emp.other_allowance || 0);
                     return (
-                      <tr key={emp.id}>
+                      <tr key={emp.id} style={{ cursor: 'pointer' }} onClick={() => { setSelectedEmp(emp); setEmpView('detail'); setEmpDetailTab('Payslips'); setEmpPayslips([]); }}>
                         <td style={{ fontWeight: 700, color: 'var(--brand)', fontSize: 13 }}>{emp.emp_number}</td>
                         <td style={{ fontWeight: 600 }}>{emp.first_name} {emp.last_name}</td>
                         <td style={{ color: 'var(--text2)', fontSize: 13 }}>{emp.department || '—'}</td>
@@ -542,7 +795,7 @@ export default function HR() {
                             {emp.status}
                           </span>
                         </td>
-                        <td>
+                        <td onClick={ev => ev.stopPropagation()}>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button className="btn btn-secondary btn-sm" onClick={() => { setEditEmpId(emp.id); setEmpForm({ first_name: emp.first_name, last_name: emp.last_name, nic: emp.nic || '', email: emp.email || '', phone: emp.phone || '', department: emp.department || '', designation: emp.designation || '', join_date: emp.join_date || '', basic_salary: String(emp.basic_salary), transport_allowance: String(emp.transport_allowance || 0), meal_allowance: String(emp.meal_allowance || 0), other_allowance: String(emp.other_allowance || 0), bank_name: emp.bank_name || '', bank_account: emp.bank_account || '', status: emp.status }); setShowEmpForm(true); }}>Edit</button>
                             <button className="btn btn-danger btn-sm" onClick={() => deleteEmployee(emp.id)}>Del</button>
@@ -621,7 +874,7 @@ export default function HR() {
                       <div className="table-toolbar">
                         <h3>Payslips — {MONTHS[selectedRunData.month - 1]} {selectedRunData.year}</h3>
                         <button className="btn btn-secondary" onClick={() => payslips.forEach(ps => printPayslip(ps, selectedRunData))}>
-                          🖨 Print All
+                          Print All
                         </button>
                       </div>
                       <table>
@@ -640,7 +893,7 @@ export default function HR() {
                               <td style={{ textAlign: 'right', color: '#dc2626', fontSize: 13 }}>-{fmt(ps.epf_employee)}</td>
                               <td style={{ textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>{fmt(ps.net_salary)}</td>
                               <td>
-                                <button className="btn btn-secondary btn-sm" onClick={() => printPayslip(ps, selectedRunData)}>🖨 Print</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => printPayslip(ps, selectedRunData)}>Print</button>
                               </td>
                             </tr>
                           ))}
