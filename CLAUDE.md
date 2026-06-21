@@ -11,7 +11,7 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 ## Critical rules (ALWAYS follow, no exceptions)
 
 1. **Commit + push after every single change** — never wait to be asked. `git add ... && git commit && git push origin main`
-2. **Update CLAUDE.md after every session** — whenever a step is completed, a feature is added, or anything significant changes, update this file and commit it. This is the hand-off document between chat sessions. It must always reflect the true current state so a new chat can pick up exactly where the last one left off.
+2. **Update CLAUDE.md after EVERY single change** — new features, bug fixes, design decisions, UI changes, architectural changes, anything discussed in chat. Do it immediately in the same commit as the code change. This is the living hand-off document between ALL chat sessions — it must always reflect the true current state so a new chat can pick up exactly where the last one left off. Never batch or defer this.
 3. **Never ask permission** for anything in this project — user said "everything is allowed, don't ask again"
 4. **Never commit secrets** — PAT token, PayHere credentials must stay out of git
 5. Use **PowerShell heredoc** for git commits: `git commit -m @' ... '@` (not bash `cat <<EOF`)
@@ -104,12 +104,13 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '�
 
 ## Key design decisions
 
-- **Sidebar slides out** when entering any module (width→0, 0.35s cubic-bezier) — this is CSS, no JS needed per page
+- **Sidebar always icon-only** — `sidebarOpen` defaults to `false`. Never hides in module mode (`module-hidden` class removed). Hamburger in topbar can expand to show labels if needed.
 - **Back button is in the TOPBAR** (App.tsx), not in individual page files — so all modules get it automatically
-- **In-page BackBtn** only for internal navigation (e.g. CustomerDetail → list)
+- **In-page BackBtn** only for internal navigation (e.g. list→detail within a module)
 - **No React Router** — all navigation is state-based in App.tsx
 - **Supabase RLS**: all queries filter by `user_id` from `supabase.auth.getUser()`
 - **Currency**: Sri Lankan Rupees (Rs.), formatted with `en-LK` locale
+- **All 21 modules** have Odoo-style list→detail: click row → hero card + 4 KPI cards + related data. Reference: `src/pages/Customers.tsx`
 
 ---
 
