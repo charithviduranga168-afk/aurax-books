@@ -73,22 +73,28 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
 
   async function addNote() {
     const text = note.trim();
-    if (!text) return;
+    if (!text || !recordId) return;
     setSubmitting(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('chatter').insert({
-        user_id: user.id,
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) return;
+      const { error: insertError } = await supabase.from('chatter').insert({
+        user_id: authData.user.id,
         record_type: recordType,
         record_id: recordId,
         message: text,
         message_type: 'note',
       });
+      if (insertError) {
+        if ((insertError as any).code === '42P01') setTableExists(false);
+        return;
+      }
       setNote('');
       await loadMessages();
+    } finally {
+      setSubmitting(false);
+      textareaRef.current?.focus();
     }
-    setSubmitting(false);
-    textareaRef.current?.focus();
   }
 
   if (!tableExists) return null;
