@@ -11,9 +11,10 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 ## Critical rules (ALWAYS follow, no exceptions)
 
 1. **Commit + push after every single change** — never wait to be asked. `git add ... && git commit && git push origin main`
-2. **Never ask permission** for anything in this project — user said "everything is allowed, don't ask again"
-3. **Never commit secrets** — PAT token, PayHere credentials must stay out of git
-4. Use **PowerShell heredoc** for git commits: `git commit -m @' ... '@` (not bash `cat <<EOF`)
+2. **Update CLAUDE.md after every session** — whenever a step is completed, a feature is added, or anything significant changes, update this file and commit it. This is the hand-off document between chat sessions. It must always reflect the true current state so a new chat can pick up exactly where the last one left off.
+3. **Never ask permission** for anything in this project — user said "everything is allowed, don't ask again"
+4. **Never commit secrets** — PAT token, PayHere credentials must stay out of git
+5. Use **PowerShell heredoc** for git commits: `git commit -m @' ... '@` (not bash `cat <<EOF`)
 
 ---
 
