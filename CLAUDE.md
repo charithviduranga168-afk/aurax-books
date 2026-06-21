@@ -104,7 +104,7 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '�
 
 ## Key design decisions
 
-- **Sidebar always icon-only** — `sidebarOpen` defaults to `false`. Never hides in module mode (`module-hidden` class removed). Hamburger in topbar can expand to show labels if needed.
+- **Sidebar accordion** — `sidebarOpen` defaults to `true` (full width with labels). Groups (Sales, Purchasing, etc.) are collapsible with a chevron header; all collapsed by default. Clicking a group header expands/collapses it. Navigating to a page auto-expands that group. Active group label turns brand purple. Never hides in module mode (`module-hidden` removed). Hamburger toggles full sidebar vs icon-only strip.
 - **Back button is in the TOPBAR** (App.tsx), not in individual page files — so all modules get it automatically
 - **In-page BackBtn** only for internal navigation (e.g. list→detail within a module)
 - **No React Router** — all navigation is state-based in App.tsx
