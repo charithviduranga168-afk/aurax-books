@@ -6,13 +6,13 @@ import { supabase } from '../supabase';
 //   id uuid primary key default gen_random_uuid(),
 //   user_id uuid references auth.users not null,
 //   record_type text not null,
-//   record_id uuid not null,
+//   record_id text not null,
 //   message text not null,
 //   message_type text not null default 'note',
 //   created_at timestamptz not null default now()
 // );
 // alter table chatter enable row level security;
-// create policy "Users see own chatter" on chatter for all using (auth.uid() = user_id);
+// create policy "chatter_policy" on chatter for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 interface ChatterMsg {
   id: string;
@@ -23,15 +23,19 @@ interface ChatterMsg {
 
 export async function logChatter(recordType: string, recordId: string, message: string) {
   if (!recordId) return;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase.from('chatter').insert({
-    user_id: user.id,
-    record_type: recordType,
-    record_id: recordId,
-    message,
-    message_type: 'log',
-  });
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('chatter').insert({
+      user_id: user.id,
+      record_type: recordType,
+      record_id: recordId,
+      message,
+      message_type: 'log',
+    });
+  } catch {
+    // fire-and-forget — silently ignore
+  }
 }
 
 interface ChatterProps {
@@ -43,7 +47,8 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
   const [messages, setMessages] = useState<ChatterMsg[]>([]);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [tableExists, setTableExists] = useState(true);
+  const [tableExists, setTableExists] = useState<boolean | null>(null); // null = loading
+  const [errorMsg, setErrorMsg] = useState('');
   const [userInitial, setUserInitial] = useState('U');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,10 +69,19 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
       .eq('record_type', recordType)
       .eq('record_id', recordId)
       .order('created_at', { ascending: false });
+
     if (error) {
-      if ((error as any).code === '42P01') setTableExists(false);
+      const code = (error as any).code;
+      if (code === '42P01') {
+        setTableExists(false);
+      } else {
+        // Table exists but some other error — still show the UI
+        setTableExists(true);
+        console.error('[Chatter] loadMessages error:', error);
+      }
       return;
     }
+    setTableExists(true);
     setMessages((data as ChatterMsg[]) || []);
   }
 
@@ -75,9 +89,14 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
     const text = note.trim();
     if (!text || !recordId) return;
     setSubmitting(true);
+    setErrorMsg('');
     try {
       const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user) return;
+      if (!authData?.user) {
+        setErrorMsg('Not logged in — please refresh and try again');
+        return;
+      }
+
       const { error: insertError } = await supabase.from('chatter').insert({
         user_id: authData.user.id,
         record_type: recordType,
@@ -85,10 +104,18 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
         message: text,
         message_type: 'note',
       });
+
       if (insertError) {
-        if ((insertError as any).code === '42P01') setTableExists(false);
+        const code = (insertError as any).code;
+        if (code === '42P01') {
+          setTableExists(false);
+        } else {
+          setErrorMsg(`Error: ${insertError.message} (${code})`);
+          console.error('[Chatter] insert error:', insertError);
+        }
         return;
       }
+
       setNote('');
       await loadMessages();
     } finally {
@@ -97,7 +124,34 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
     }
   }
 
-  if (!tableExists) return null;
+  // Still loading
+  if (tableExists === null) return null;
+
+  // Table doesn't exist — show setup prompt instead of disappearing silently
+  if (tableExists === false) {
+    return (
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+        <div style={{ fontSize: 13, color: 'var(--text3)', background: '#fafafa', border: '1px dashed #e5e7eb', borderRadius: 8, padding: '14px 16px' }}>
+          <strong style={{ color: 'var(--text2)' }}>Chatter</strong> — table not set up yet. Run this SQL in Supabase → SQL Editor to enable it:
+          <pre style={{ margin: '10px 0 0', fontSize: 11, background: '#f3f4f6', borderRadius: 6, padding: '10px 12px', overflowX: 'auto', color: '#374151', lineHeight: 1.6 }}>
+{`create table public.chatter (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users not null,
+  record_type text not null,
+  record_id text not null,
+  message text not null,
+  message_type text not null default 'note',
+  created_at timestamptz not null default now()
+);
+alter table chatter enable row level security;
+create policy "chatter_policy" on chatter
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);`}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   const fmtTime = (iso: string) => {
     const d = new Date(iso);
@@ -130,15 +184,18 @@ export function Chatter({ recordType, recordId }: ChatterProps) {
             rows={2}
             style={{
               width: '100%', resize: 'vertical',
-              border: '1.5px solid var(--border)', borderRadius: 8,
+              border: `1.5px solid ${errorMsg ? '#dc2626' : 'var(--border)'}`, borderRadius: 8,
               padding: '10px 12px', fontSize: 13, fontFamily: 'inherit',
               color: 'var(--text1)', background: '#fff',
               boxSizing: 'border-box', outline: 'none',
               transition: 'border-color 0.15s',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = '#8b5cf6'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = errorMsg ? '#dc2626' : '#8b5cf6'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = errorMsg ? '#dc2626' : 'var(--border)'; }}
           />
+          {errorMsg && (
+            <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>{errorMsg}</div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>Ctrl+Enter to submit</span>
             <button
