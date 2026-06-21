@@ -410,14 +410,18 @@ export default function App() {
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center',
                       justifyContent: 'space-between', background: 'none', border: 'none',
-                      cursor: 'pointer', padding: '6px 12px 4px', textAlign: 'left',
+                      cursor: 'pointer', padding: '10px 12px 4px', textAlign: 'left',
                     }}
                   >
-                    <span className="nav-section-label" style={{ margin: 0, color: hasActive ? 'var(--brand)' : undefined }}>
+                    <span style={{
+                      fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      color: hasActive ? 'var(--brand)' : 'var(--text)',
+                    }}>
                       {group.label}
                     </span>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                      style={{ color: 'var(--text3)', flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                      style={{ color: hasActive ? 'var(--brand)' : 'var(--text3)', flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                       <polyline points="6 9 12 15 18 9"/>
                     </svg>
                   </button>
@@ -430,9 +434,10 @@ export default function App() {
                     className={`nav-item ${page === item.page ? 'active' : ''}`}
                     onClick={() => nav(item.page as Page)}
                     title={!sidebarOpen ? item.label : undefined}
+                    style={{ fontSize: '13px' }}
                   >
-                    <NavIcon name={item.page} />
-                    {sidebarOpen && <span className="nav-item-label">{item.label}</span>}
+                    <NavIcon name={item.page} size={14} />
+                    {sidebarOpen && <span className="nav-item-label" style={{ fontSize: '13px' }}>{item.label}</span>}
                   </button>
                 ))}
               </div>
