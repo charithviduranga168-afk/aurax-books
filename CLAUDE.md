@@ -51,11 +51,11 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 | journal | src/pages/JournalEntries.tsx ✓ list→detail |
 | hr | src/pages/HR.tsx ✓ list→detail (employee detail in Employees tab) |
 | mrp | src/pages/MRP.tsx ✓ list→detail (click PO → BOM explosion) |
-| stockadjustments | src/pages/StockAdjustments.tsx ← PENDING step 14 |
+| stockadjustments | src/pages/StockAdjustments.tsx ✓ list→detail (click row → before/after/reason detail) |
 | coa | src/pages/ChartOfAccounts.tsx ✓ list→detail (click account → journal entry lines) |
 | expenses | src/pages/Expenses.tsx ✓ list→detail (click expense → details, KPIs, PDF) |
-| qc | src/pages/QualityControl.tsx ← PENDING step 20 |
-| projects | src/pages/Projects.tsx ← PENDING step 21 |
+| qc | src/pages/QualityControl.tsx ✓ list→detail (click inspection → pass-fail bar, KPIs, details) |
+| projects | src/pages/Projects.tsx ✓ list→detail (click project → kanban board, budget bar, tasks) |
 | manufacturing | src/pages/Manufacturing.tsx (production orders — may be done) |
 | pos | src/pages/PointOfSale.tsx |
 | bankreconciliation | src/pages/BankReconciliation.tsx |
@@ -69,15 +69,9 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 
 ## Pending work
 
-### List→detail pattern still needed (say "step X" to build):
+### List→detail pattern — ALL STEPS COMPLETE ✓
 
-| Step | Module | File | Detail content |
-|------|--------|------|----------------|
-| 14 | Stock Adjustments | StockAdjustments.tsx | list → detail: adjustment lines, reason, product impacts |
-| ~~15~~ | ~~Chart of Accounts~~ | ~~ChartOfAccounts.tsx~~ | ✓ Done |
-| ~~16~~ | ~~Expenses~~ | ~~Expenses.tsx~~ | ✓ Done |
-| 20 | QC | QualityControl.tsx | list → detail: inspection results, pass/fail items |
-| 21 | Projects | Projects.tsx | list → detail: tasks, milestones, team members |
+All 21 modules now have list→detail navigation. No pending steps remain.
 
 ### Other potential tasks:
 - Customer portal improvements
