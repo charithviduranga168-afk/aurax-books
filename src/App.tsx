@@ -414,9 +414,9 @@ export default function App() {
                     }}
                   >
                     <span style={{
-                      fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em',
+                      fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em',
                       textTransform: 'uppercase',
-                      color: hasActive ? 'var(--brand)' : 'var(--text)',
+                      color: hasActive ? 'var(--brand)' : '#9ca3af',
                     }}>
                       {group.label}
                     </span>
