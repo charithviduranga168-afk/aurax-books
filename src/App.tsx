@@ -184,7 +184,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
   const [page, setPage] = useState<Page>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moduleMode, setModuleMode] = useState(false);
   const [openGroups] = useState<string[]>(menuGroups.map((g) => g.label));
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
@@ -377,7 +377,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${moduleMode ? 'module-hidden' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 52 : 30, width: sidebarOpen ? 'auto' : 30, objectFit: 'contain', objectPosition: 'center top', flexShrink: 0, transition: 'height 0.35s' }} />
