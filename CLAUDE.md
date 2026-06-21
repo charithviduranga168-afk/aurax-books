@@ -91,22 +91,63 @@ Every transaction type now has status reversal buttons:
 | QualityControl | ✓ any → pending (reset to initial) | ✓ any non-cancelled → cancelled |
 | Manufacturing | ✓ Completed/Cancelled → Planned (list row button) | ✓ already existed |
 
-### Odoo-style redesign — step by step
+### Odoo-style redesign — THE STANDARD (applied to Sales module, roll out to all)
 
-| Step | Feature | Status |
-|------|---------|--------|
-| 1 | Smart Buttons (stat buttons) | ✓ Done — Customers, Suppliers, SalesOrders, PurchaseOrders |
-| 2 | Chatter / activity log | ✓ Done — all 8 modules (see Architecture) |
-| 3 | List view filter bar (Odoo-style quick filters) | Pending |
-| 4 | Kanban view toggle (SalesOrders, Projects, Manufacturing, HR) | Pending |
-| 5 | Detail form two-column layout | Pending |
-| 6 | Action menu (gear dropdown: Print, Duplicate, Archive, Export) | Pending |
+**Gold standard files:** `Customers.tsx`, `SalesOrders.tsx`, `Invoices.tsx`, `Receipts.tsx`
+
+Every module must have this exact pattern:
+
+#### List view
+- Page header: 26px 800 title + 14px subtitle + single `btn-primary` "New" button (no chevron dropdown)
+- 4 KPI summary cards in a 2×2 grid — each card: 48×48 lavender rounded-square icon, label, large value, sub-label. Clickable to filter.
+- Table card (`className="card"` padding:0 overflow:hidden) with toolbar:
+  - Left: "New" btn-primary btn-sm + Download icon button (34×34, exports Excel via `xlsx` library)
+  - Right: search input, Filters dropdown (radio options, active count badge), Group By dropdown, Favorites (localStorage), pagination "1-N/N" + ChevronLeft/Right, view toggle (LayoutList/LayoutGrid/BarChart2)
+- Active filter chips row below toolbar (lavender pills + X, "Clear all" link)
+- Table: checkbox (select-all with indeterminate ref), data columns, kebab menu (MoreVertical) per row
+- Group By inserts gray `var(--bg)` header rows when active
+- Footer: "X selected" or "N-N/N" left, ChevronLeft/Right right
+- Three view modes: List (table), Kanban (card grid), Analytics (horizontal bar chart)
+- Excel export: `XLSX.utils.json_to_sheet` → `XLSX.writeFile`, exports selected rows or all if none selected, badge on download button shows count
+
+#### Detail view
+- `BackBtn` (← arrow, text2 color, hover brand, padding-bottom 20px)
+- Hero card (padding 28px 32px): doc# or name 26px 800 + status badge pill (colored bg/text) + meta chips (customer, date etc with lucide icons) on left | 2 key figures (11px uppercase text3 label + 22px 800 colored value) on right | outline action buttons far right
+- Financial Overview card (padding 20px 28px): "FINANCIAL OVERVIEW" 11px 700 uppercase text3 header + 4-column grid with 28px padding + 1px border dividers between columns
+- Tab section (card padding:0): underline active tab (2px solid brand, color brand, marginBottom -1) + right-side toolbar (search + Filters btn + list/grid toggle)
+- Tables inside tabs have checkbox column
+- Tab card footer: count left + prev/next pagination right
+- Chatter at bottom of every detail view
+
+#### Inline shared utilities (defined in every file):
+```tsx
+const fmt = (n: number) => 'Rs. ' + (n||0).toLocaleString('en-LK', {minimumFractionDigits:2});
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+function Avatar({ name, size=36 }) { /* colored initials circle, colors array by charCode */ }
+function BackBtn({ label, onClick }) { /* ← arrow, text2/hover:brand */ }
+function statusBadge(s: string) { /* colored pill by status string */ }
+```
+
+#### Status applied so far:
+| Module | List redesign | Detail redesign |
+|--------|--------------|----------------|
+| Customers | ✓ | ✓ |
+| SalesOrders | ✓ | ✓ |
+| Invoices | ✓ | ✓ |
+| Receipts | ✓ | ✓ |
+| Suppliers | Pending | Pending |
+| PurchaseOrders | Pending | Pending |
+| Bills | Pending | Pending |
+| Payments | Pending | Pending |
+| GRN | Pending | Pending |
+| All other modules | Pending | Pending |
 
 ### Other potential tasks:
+- Apply redesign to Purchasing module (Suppliers, PurchaseOrders, Bills, Payments, GRN)
+- Apply redesign to remaining modules (Products, Inventory, HR, etc.)
 - Customer portal improvements
 - Reports/Analytics enhancements
 - Settings page
-- Any new modules the user requests
 
 ---
 
@@ -118,15 +159,17 @@ Every module follows this exact pattern — reference `src/pages/Customers.tsx` 
 // State
 const [view, setView] = useState<'list'|'detail'>('list');
 const [selected, setSelected] = useState<T|null>(null);
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+const [viewMode, setViewMode] = useState<'list'|'kanban'|'analytics'>('list');
 
 // Shared components (inline in each file)
 function Avatar({ name, size=36 }) { /* colored initials circle */ }
-function BackBtn({ label, onClick }) { /* ← arrow button */ }
+function BackBtn({ label, onClick }) { /* ← arrow button, text2 color */ }
 const fmt = (n: number) => 'Rs. ' + (n||0).toLocaleString('en-LK', {minimumFractionDigits:2});
 const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
-// List: rows have cursor:pointer, onClick sets selected+view
-// Detail: BackBtn + hero card + 4 KPI cards + tabs for related data
+// List: rows have cursor:pointer, selectedIds highlight lavender, onClick sets selected+view
+// Detail: BackBtn + hero card + Financial Overview card + underline tabs + Chatter
 ```
 
 ---
