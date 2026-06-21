@@ -184,9 +184,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'checking' | 'admin' | 'customer'>('checking');
   const [page, setPage] = useState<Page>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [moduleMode, setModuleMode] = useState(false);
-  const [openGroups] = useState<string[]>(menuGroups.map((g) => g.label));
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
   const [invoicePrefill, setInvoicePrefill] = useState<{ so: any; lines: any[] } | null>(null);
@@ -250,9 +250,17 @@ export default function App() {
 
   if (userType === 'customer') return <CustomerPortal />;
 
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev =>
+      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  };
+
   const nav = (p: Page) => {
     setPage(p);
     setModuleMode(p !== 'dashboard');
+    const group = menuGroups.find(g => g.items.some(i => i.page === p));
+    if (group) setOpenGroups(prev => prev.includes(group.label) ? prev : [...prev, group.label]);
   };
 
   const exitModule = () => {
@@ -390,23 +398,46 @@ export default function App() {
             {sidebarOpen && <span className="nav-item-label">Dashboard</span>}
           </button>
 
-          {/* Module groups — flat with section labels */}
-          {menuGroups.map((group) => (
-            <div key={group.label}>
-              {sidebarOpen && <div className="nav-section-label">{group.label}</div>}
-              {group.items.map((item) => (
-                <button
-                  key={item.page}
-                  className={`nav-item ${page === item.page ? 'active' : ''}`}
-                  onClick={() => nav(item.page as Page)}
-                  title={!sidebarOpen ? item.label : undefined}
-                >
-                  <NavIcon name={item.page} />
-                  {sidebarOpen && <span className="nav-item-label">{item.label}</span>}
-                </button>
-              ))}
-            </div>
-          ))}
+          {/* Module groups — accordion */}
+          {menuGroups.map((group) => {
+            const isOpen = openGroups.includes(group.label);
+            const hasActive = group.items.some(i => i.page === page);
+            return (
+              <div key={group.label}>
+                {sidebarOpen ? (
+                  <button
+                    onClick={() => toggleGroup(group.label)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center',
+                      justifyContent: 'space-between', background: 'none', border: 'none',
+                      cursor: 'pointer', padding: '6px 12px 4px', textAlign: 'left',
+                    }}
+                  >
+                    <span className="nav-section-label" style={{ margin: 0, color: hasActive ? 'var(--brand)' : undefined }}>
+                      {group.label}
+                    </span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      style={{ color: 'var(--text3)', flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                ) : (
+                  <div style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
+                )}
+                {(isOpen || !sidebarOpen) && group.items.map((item) => (
+                  <button
+                    key={item.page}
+                    className={`nav-item ${page === item.page ? 'active' : ''}`}
+                    onClick={() => nav(item.page as Page)}
+                    title={!sidebarOpen ? item.label : undefined}
+                  >
+                    <NavIcon name={item.page} />
+                    {sidebarOpen && <span className="nav-item-label">{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer */}
