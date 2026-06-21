@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Search, Wallet } from 'lucide-react';
 
 function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -540,7 +541,7 @@ export default function Expenses() {
               {allCategories.map(c => <option key={c}>{c}</option>)}
             </select>
             <div className="search-wrap">
-              <span className="search-icon">🔍</span>
+              <Search size={13} className="search-icon" />
               <input placeholder="Search expenses..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </div>
@@ -549,7 +550,7 @@ export default function Expenses() {
           <div className="empty-state"><p>Loading...</p></div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">💰</div>
+            <div className="empty-state-icon"><Wallet size={32} color="#7c3aed" /></div>
             <h3>No expenses yet</h3>
             <p>Record your business expenses here</p>
           </div>

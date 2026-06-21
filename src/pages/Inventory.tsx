@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { ScrollText, Search, Package } from 'lucide-react';
 
 interface Movement {
   date: string;
@@ -249,7 +250,7 @@ export default function Inventory() {
           </div>
           {productMovements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📜</div>
+              <div className="empty-state-icon"><ScrollText size={32} color="#7c3aed" /></div>
               <h3>No movements recorded yet</h3>
               <p>Stock movements will appear here once GRNs, invoices, or production orders involve this product.</p>
             </div>
@@ -356,7 +357,7 @@ export default function Inventory() {
             <h3>Stock by Product</h3>
             <div className="table-actions">
               <div className="search-wrap">
-                <span className="search-icon">🔍</span>
+                <Search size={13} className="search-icon" />
                 <input
                   placeholder="Search product or category..."
                   value={stockSearch}
@@ -375,7 +376,7 @@ export default function Inventory() {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📦</div>
+              <div className="empty-state-icon"><Package size={32} color="#7c3aed" /></div>
               <h3>No products found</h3>
               <p>Try adjusting your search or filter</p>
             </div>
@@ -427,7 +428,7 @@ export default function Inventory() {
             <h3>Stock Movement Ledger</h3>
             <div className="table-actions">
               <div className="search-wrap">
-                <span className="search-icon">🔍</span>
+                <Search size={13} className="search-icon" />
                 <input
                   placeholder="Search product or reference..."
                   value={moveSearch}
@@ -448,7 +449,7 @@ export default function Inventory() {
             </div>
           ) : filteredMovements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📜</div>
+              <div className="empty-state-icon"><ScrollText size={32} color="#7c3aed" /></div>
               <h3>No stock movements yet</h3>
               <p>Movements appear here once GRNs are received, invoices are issued, or production orders are completed</p>
             </div>

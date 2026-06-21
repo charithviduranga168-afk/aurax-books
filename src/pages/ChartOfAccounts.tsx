@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { BookOpen, ClipboardList, Zap, X, Lightbulb } from 'lucide-react'
 
 type Account = {
   id: string
@@ -293,7 +294,7 @@ export default function ChartOfAccounts() {
             <div className="empty-state"><p>Loading entries...</p></div>
           ) : journalLines.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📒</div>
+              <div className="empty-state-icon"><BookOpen size={32} color="#7c3aed" /></div>
               <h3>No journal entries</h3>
               <p>No transactions have been posted to this account yet</p>
             </div>
@@ -353,7 +354,7 @@ export default function ChartOfAccounts() {
         <div style={{ display: 'flex', gap: '8px' }}>
           {accounts.length === 0 && (
             <button className="btn btn-secondary" onClick={seedDefaultAccounts} disabled={seeding}>
-              {seeding ? 'Setting up...' : '⚡ Load Default Accounts'}
+              {seeding ? 'Setting up...' : <><Zap size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Load Default Accounts</>}
             </button>
           )}
           <button className="btn btn-primary" onClick={() => (showForm ? setShowForm(false) : openAdd())}>
@@ -366,7 +367,7 @@ export default function ChartOfAccounts() {
         <div className="inline-panel">
           <div className="inline-panel-header">
             <div className="inline-panel-title">{editAccount ? 'Edit Account' : 'New Account'}</div>
-            <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
+            <button className="modal-close" onClick={() => setShowForm(false)}><X size={16} /></button>
           </div>
           <div className="inline-panel-body">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
@@ -417,7 +418,7 @@ export default function ChartOfAccounts() {
             </div>
             {form.sub_type === 'Cash & Bank' && (
               <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand)' }}>
-                💡 Cash & Bank accounts will be available as payment methods in Invoices, Receipts, Bills and Payments.
+                <Lightbulb size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} />Cash & Bank accounts will be available as payment methods in Invoices, Receipts, Bills and Payments.
               </div>
             )}
           </div>
@@ -472,7 +473,7 @@ export default function ChartOfAccounts() {
 
       {!loading && accounts.length === 0 && (
         <div className="empty-state">
-          <div className="empty-state-icon">📋</div>
+          <div className="empty-state-icon"><ClipboardList size={32} color="#7c3aed" /></div>
           <h3>No accounts yet</h3>
           <p>Load the default Sri Lankan SME chart of accounts or create your own</p>
           <button className="btn btn-primary" onClick={seedDefaultAccounts} disabled={seeding}>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import type { Page } from '../App';
+import { Receipt } from 'lucide-react';
 
 interface Props {
   nav: (p: Page) => void;
@@ -212,7 +213,7 @@ export default function Dashboard({ nav }: Props) {
             </div>
             {recentInvoices.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">🧾</div>
+                <div className="empty-state-icon"><Receipt size={32} color="#7c3aed" /></div>
                 <h3>No invoices yet</h3>
                 <p>Create your first invoice to get started</p>
                 <button

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { HardHat, Settings2, Package } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -688,7 +689,7 @@ export default function Manufacturing() {
               </div>
             ) : boms.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">🏗️</div>
+                <div className="empty-state-icon"><HardHat size={32} color="#7c3aed" /></div>
                 <h3>No BOMs yet</h3>
                 <p>Create a bill of materials to define how products are manufactured</p>
                 <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={openAddBom}>
@@ -819,7 +820,7 @@ export default function Manufacturing() {
               </div>
             ) : orders.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">⚙️</div>
+                <div className="empty-state-icon"><Settings2 size={32} color="#7c3aed" /></div>
                 <h3>No production orders yet</h3>
                 <p>Create a production order to start manufacturing</p>
                 <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={openAddOrder}>
@@ -910,7 +911,7 @@ export default function Manufacturing() {
             </div>
           ) : movements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📦</div>
+              <div className="empty-state-icon"><Package size={32} color="#7c3aed" /></div>
               <h3>No stock movements yet</h3>
               <p>Movements appear here once production orders are completed</p>
             </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
+import { Wallet, CalendarDays, Search, User } from 'lucide-react';
 
 interface Employee {
   id: string; emp_number: string; first_name: string; last_name: string; nic: string;
@@ -602,7 +603,7 @@ export default function HR() {
           <div className="table-wrap">
             {empPayslips.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">💰</div>
+                <div className="empty-state-icon"><Wallet size={32} color="#7c3aed" /></div>
                 <h3>No payslips yet</h3>
                 <p>Payslips will appear here after payroll runs that include this employee.</p>
               </div>
@@ -644,7 +645,7 @@ export default function HR() {
           <div className="table-wrap">
             {empLeaves.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon">📅</div>
+                <div className="empty-state-icon"><CalendarDays size={32} color="#7c3aed" /></div>
                 <h3>No leave requests</h3>
                 <p>Leave requests for this employee will appear here.</p>
               </div>
@@ -767,12 +768,12 @@ export default function HR() {
             <div className="table-toolbar">
               <h3>Employee Directory</h3>
               <div className="table-actions">
-                <div className="search-wrap"><span className="search-icon">🔍</span><input placeholder="Search..." value={empSearch} onChange={e => setEmpSearch(e.target.value)} /></div>
+                <div className="search-wrap"><Search size={13} className="search-icon" /><input placeholder="Search..." value={empSearch} onChange={e => setEmpSearch(e.target.value)} /></div>
                 <button className="btn btn-primary" onClick={() => { setShowEmpForm(true); setEditEmpId(null); setEmpForm(blankEmp); }}>+ Add Employee</button>
               </div>
             </div>
             {filteredEmps.length === 0 ? (
-              <div className="empty-state"><div className="empty-state-icon">👤</div><h3>No employees yet</h3><p>Add your first employee to get started</p></div>
+              <div className="empty-state"><div className="empty-state-icon"><User size={32} color="#7c3aed" /></div><h3>No employees yet</h3><p>Add your first employee to get started</p></div>
             ) : (
               <table>
                 <thead>
@@ -831,7 +832,7 @@ export default function HR() {
 
           {/* Payroll history + payslips */}
           {payrollRuns.length === 0 ? (
-            <div className="empty-state"><div className="empty-state-icon">💰</div><h3>No payroll runs yet</h3><p>Run payroll above to generate monthly payslips</p></div>
+            <div className="empty-state"><div className="empty-state-icon"><Wallet size={32} color="#7c3aed" /></div><h3>No payroll runs yet</h3><p>Run payroll above to generate monthly payslips</p></div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20 }}>
               {/* Run list */}
@@ -956,7 +957,7 @@ export default function HR() {
           <div className="table-wrap">
             <div className="table-toolbar"><h3>Leave Requests</h3></div>
             {leaves.length === 0 ? (
-              <div className="empty-state"><div className="empty-state-icon">📅</div><h3>No leave requests</h3></div>
+              <div className="empty-state"><div className="empty-state-icon"><CalendarDays size={32} color="#7c3aed" /></div><h3>No leave requests</h3></div>
             ) : (
               <table>
                 <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th></th></tr></thead>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { ClipboardList, Factory, AlertTriangle, CheckCircle, Package, Wrench, Bell, ShoppingCart, Check, X, Download } from 'lucide-react';
 
 interface OpenPO {
   id: string;
@@ -304,13 +305,13 @@ export default function MRP() {
             <div className="empty-state"><p>Calculating requirements...</p></div>
           ) : !selectedPO.bom_id ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
+              <div className="empty-state-icon"><ClipboardList size={32} color="#7c3aed" /></div>
               <h3>No BOM assigned</h3>
               <p>This production order does not have a Bill of Materials assigned.</p>
             </div>
           ) : poRequirements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
+              <div className="empty-state-icon"><ClipboardList size={32} color="#7c3aed" /></div>
               <h3>No components found</h3>
               <p>The BOM for this production order has no component lines.</p>
             </div>
@@ -340,11 +341,11 @@ export default function MRP() {
                       <td>
                         {r.net > 0 ? (
                           <span style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                            ⚠ Shortage
+                            <AlertTriangle size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Shortage
                           </span>
                         ) : (
                           <span style={{ background: '#dcfce7', color: '#16a34a', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                            ✓ OK
+                            <Check size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />OK
                           </span>
                         )}
                       </td>
@@ -381,13 +382,13 @@ export default function MRP() {
       {/* Stats strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Open Production Orders', value: openPOs.length, color: '#7c3aed', icon: '🏭' },
-          { label: 'Material Shortages', value: calculated ? shortages : '—', color: shortages > 0 ? '#dc2626' : '#16a34a', icon: '⚠️' },
-          { label: 'Components Sufficient', value: calculated ? sufficient : '—', color: '#16a34a', icon: '✅' },
-          { label: 'Reorder Alerts', value: reorderAlerts.length, color: reorderAlerts.length > 0 ? '#d97706' : '#16a34a', icon: '📦' },
+          { label: 'Open Production Orders', value: openPOs.length, color: '#7c3aed', icon: <Factory size={22} color="#7c3aed" /> },
+          { label: 'Material Shortages', value: calculated ? shortages : '—', color: shortages > 0 ? '#dc2626' : '#16a34a', icon: <AlertTriangle size={22} color={shortages > 0 ? '#dc2626' : '#16a34a'} /> },
+          { label: 'Components Sufficient', value: calculated ? sufficient : '—', color: '#16a34a', icon: <CheckCircle size={22} color="#16a34a" /> },
+          { label: 'Reorder Alerts', value: reorderAlerts.length, color: reorderAlerts.length > 0 ? '#d97706' : '#16a34a', icon: <Package size={22} color={reorderAlerts.length > 0 ? '#d97706' : '#16a34a'} /> },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '20px 24px' }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
+            <div style={{ marginBottom: 8 }}>{s.icon}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{s.label}</div>
           </div>
@@ -443,9 +444,9 @@ export default function MRP() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border)', marginBottom: 24 }}>
         {[
-          { label: `Production Requirements${calculated ? ` (${requirements.length})` : ''}`, icon: '🔩' },
-          { label: `Reorder Alerts (${reorderAlerts.length})`, icon: '🔔' },
-          { label: `Purchase Suggestions${calculated ? ` (${suggestions.length})` : ''}`, icon: '🛒' },
+          { label: `Production Requirements${calculated ? ` (${requirements.length})` : ''}`, icon: <Wrench size={14} /> },
+          { label: `Reorder Alerts (${reorderAlerts.length})`, icon: <Bell size={14} /> },
+          { label: `Purchase Suggestions${calculated ? ` (${suggestions.length})` : ''}`, icon: <ShoppingCart size={14} /> },
         ].map((t, i) => (
           <button key={t.label} onClick={() => setTab(i)}
             style={{ padding: '10px 22px', background: 'none', border: 'none', borderBottom: tab === i ? '2px solid var(--blue)' : '2px solid transparent', marginBottom: -2, color: tab === i ? 'var(--blue)' : 'var(--text2)', fontWeight: tab === i ? 700 : 500, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -459,7 +460,7 @@ export default function MRP() {
         <div>
           {!calculated ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🏭</div>
+              <div className="empty-state-icon"><Factory size={32} color="#7c3aed" /></div>
               <h3>Run MRP to see requirements</h3>
               <p>Click "Run MRP" above to explode your BOMs and calculate material requirements from {openPOs.length} open production order{openPOs.length !== 1 ? 's' : ''}.</p>
               <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={runMRP} disabled={calculating || openPOs.length === 0}>
@@ -468,7 +469,7 @@ export default function MRP() {
             </div>
           ) : requirements.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">✅</div>
+              <div className="empty-state-icon"><CheckCircle size={32} color="#16a34a" /></div>
               <h3>No material requirements found</h3>
               <p>No open production orders have BOMs with components, or all production orders are completed.</p>
             </div>
@@ -517,11 +518,11 @@ export default function MRP() {
                         <td>
                           {r.net > 0 ? (
                             <span style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                              ⚠ Shortage
+                              <AlertTriangle size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Shortage
                             </span>
                           ) : (
                             <span style={{ background: '#dcfce7', color: '#16a34a', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                              ✓ OK
+                              <Check size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />OK
                             </span>
                           )}
                         </td>
@@ -540,14 +541,14 @@ export default function MRP() {
         <div>
           {reorderAlerts.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">✅</div>
+              <div className="empty-state-icon"><CheckCircle size={32} color="#16a34a" /></div>
               <h3>All stock levels are healthy</h3>
               <p>No products are currently at or below their reorder level. Set reorder levels in the Products module to track low stock.</p>
             </div>
           ) : (
             <div className="table-wrap">
               <div style={{ padding: '12px 20px', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16 }}>⚠️</span>
+                <AlertTriangle size={16} color="#92400e" />
                 <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>
                   {reorderAlerts.length} product{reorderAlerts.length !== 1 ? 's' : ''} at or below reorder level — order soon to avoid stockouts
                 </span>
@@ -568,9 +569,9 @@ export default function MRP() {
                     const pct = a.reorder_level > 0 ? (a.stock_qty / a.reorder_level) * 100 : 0;
                     const urgency = a.stock_qty <= 0 ? 'critical' : pct < 50 ? 'high' : 'medium';
                     const urgencyStyle = {
-                      critical: { bg: '#fee2e2', color: '#dc2626', label: '🔴 Critical' },
-                      high:     { bg: '#fef3c7', color: '#d97706', label: '🟠 High' },
-                      medium:   { bg: '#fef9c3', color: '#a16207', label: '🟡 Medium' },
+                      critical: { bg: '#fee2e2', color: '#dc2626', dot: '#dc2626', label: 'Critical' },
+                      high:     { bg: '#fef3c7', color: '#d97706', dot: '#d97706', label: 'High' },
+                      medium:   { bg: '#fef9c3', color: '#a16207', dot: '#ca8a04', label: 'Medium' },
                     }[urgency];
                     return (
                       <tr key={a.id} style={{ background: urgency === 'critical' ? '#fff5f5' : undefined }}>
@@ -582,7 +583,8 @@ export default function MRP() {
                         <td style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>{fmt(a.deficit)}</td>
                         <td style={{ color: 'var(--text2)', fontSize: 13 }}>{a.unit || '—'}</td>
                         <td>
-                          <span style={{ background: urgencyStyle.bg, color: urgencyStyle.color, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                          <span style={{ background: urgencyStyle.bg, color: urgencyStyle.color, borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: (urgencyStyle as any).dot, display: 'inline-block', flexShrink: 0 }} />
                             {urgencyStyle.label}
                           </span>
                         </td>
@@ -601,7 +603,7 @@ export default function MRP() {
         <div>
           {!calculated && reorderAlerts.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🛒</div>
+              <div className="empty-state-icon"><ShoppingCart size={32} color="#7c3aed" /></div>
               <h3>Run MRP to generate suggestions</h3>
               <p>Purchase suggestions combine production shortages and reorder alerts into a single recommended order list.</p>
               <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={runMRP} disabled={calculating}>
@@ -610,7 +612,7 @@ export default function MRP() {
             </div>
           ) : suggestions.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">✅</div>
+              <div className="empty-state-icon"><CheckCircle size={32} color="#16a34a" /></div>
               <h3>No purchases needed</h3>
               <p>All materials are sufficiently stocked and no reorder alerts are active.</p>
             </div>
@@ -628,7 +630,7 @@ export default function MRP() {
                   const a = document.createElement('a'); a.href = url; a.download = 'mrp-suggestions.csv'; a.click();
                   URL.revokeObjectURL(url);
                 }}>
-                  ↓ Export CSV
+                  <Download size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Export CSV
                 </button>
               </div>
               <div className="table-wrap">
@@ -651,7 +653,7 @@ export default function MRP() {
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {s.reasons.map(r => (
                               <span key={r} style={{ background: r === 'Production shortage' ? '#fee2e2' : '#fef3c7', color: r === 'Production shortage' ? '#dc2626' : '#d97706', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 700 }}>
-                                {r === 'Production shortage' ? '🏭' : '📦'} {r}
+                                {r === 'Production shortage' ? <Factory size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} /> : <Package size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />}{r}
                               </span>
                             ))}
                           </div>

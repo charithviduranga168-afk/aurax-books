@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { X } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -262,7 +263,7 @@ export default function Products() {
             <div className="card" style={{ width: 560, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 16 }}>{editing ? 'Edit Product' : 'Add Product'}</h3>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowForm(false)}>✕</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowForm(false)}><X size={14} /></button>
               </div>
               {renderForm()}
             </div>

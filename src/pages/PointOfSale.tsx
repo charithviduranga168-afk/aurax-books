@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
+import { Search, ShoppingCart, Check, Printer, ClipboardList, X, Package, Trash2, CreditCard, User } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -310,7 +311,7 @@ export default function PointOfSale({ nav }: Props) {
             </div>
           </div>
           {sales.filter((s) => !histSearch || s.sale_number.includes(histSearch) || (s.customer_name || '').toLowerCase().includes(histSearch.toLowerCase())).length === 0
-            ? <div className="empty-state"><div className="empty-state-icon">🛒</div><h3>No sales yet</h3></div>
+            ? <div className="empty-state"><div className="empty-state-icon"><ShoppingCart size={32} color="#7c3aed" /></div><h3>No sales yet</h3></div>
             : (
               <table>
                 <thead><tr><th>Sale #</th><th>Date & Time</th><th>Customer</th><th>Payment</th><th>Total</th><th>Change</th><th>Status</th><th></th></tr></thead>
@@ -351,7 +352,7 @@ export default function PointOfSale({ nav }: Props) {
       {showSuccess && lastReceipt && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: '36px 32px', width: 360, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>✓</div>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><Check size={28} color="#16a34a" /></div>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Payment Received</div>
             <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>{lastReceipt.sale_number}</div>
             <div style={{ background: '#f9fafb', borderRadius: 10, padding: '16px 20px', marginBottom: 20, textAlign: 'left' }}>
@@ -373,7 +374,7 @@ export default function PointOfSale({ nav }: Props) {
               )}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => printReceipt(lastReceipt)} style={{ flex: 1, height: 42, background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>🖨 Receipt</button>
+              <button onClick={() => printReceipt(lastReceipt)} style={{ flex: 1, height: 42, background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Printer size={15} /> Receipt</button>
               <button onClick={() => setShowSuccess(false)} style={{ flex: 1, height: 42, background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>New Sale</button>
             </div>
           </div>
@@ -435,7 +436,7 @@ export default function PointOfSale({ nav }: Props) {
                 disabled={processing || (payMethod === 'Cash' && tendered < total)}
                 style={{ flex: 2, height: 46, background: (processing || (payMethod === 'Cash' && tendered < total)) ? '#9ca3af' : '#16a34a', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: 16 }}
               >
-                {processing ? 'Processing...' : `✓ Confirm ${fmt(total)}`}
+                {processing ? 'Processing...' : <><Check size={16} style={{ verticalAlign: 'middle', marginRight: 5 }} />Confirm {fmt(total)}</>}
               </button>
             </div>
           </div>
@@ -448,7 +449,7 @@ export default function PointOfSale({ nav }: Props) {
         <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)' }} />
         {/* Customer picker */}
         <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} style={{ height: 34, padding: '0 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
-          <option value="">👤 Walk-in Customer</option>
+          <option value="">Walk-in Customer</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
 
@@ -456,12 +457,12 @@ export default function PointOfSale({ nav }: Props) {
 
         {/* Search */}
         <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, opacity: 0.6 }}>🔍</span>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.6, display: 'flex' }}><Search size={14} /></span>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products..." style={{ height: 34, width: 220, paddingLeft: 32, paddingRight: 12, borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, outline: 'none' }} />
         </div>
 
-        <button onClick={() => setView('history')} style={{ height: 34, padding: '0 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: 'transparent', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>📋 History</button>
-        <button onClick={() => nav?.('dashboard')} style={{ height: 34, padding: '0 14px', borderRadius: 6, border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>✕ Close</button>
+        <button onClick={() => setView('history')} style={{ height: 34, padding: '0 14px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: 'transparent', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}><ClipboardList size={13} /> History</button>
+        <button onClick={() => nav?.('dashboard')} style={{ height: 34, padding: '0 14px', borderRadius: 6, border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}><X size={13} /> Close</button>
       </div>
 
       {/* ── MAIN AREA ── */}
@@ -493,7 +494,7 @@ export default function PointOfSale({ nav }: Props) {
                 >
                   {/* Colored top */}
                   <div style={{ height: 72, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 28, opacity: 0.9 }}>📦</span>
+                    <Package size={28} color="rgba(255,255,255,0.85)" />
                   </div>
                   {/* Info */}
                   <div style={{ padding: '10px 10px 12px' }}>
@@ -520,14 +521,14 @@ export default function PointOfSale({ nav }: Props) {
             <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>
               Order <span style={{ color: '#9ca3af', fontWeight: 500 }}>({cart.length})</span>
             </div>
-            {cart.length > 0 && <button onClick={clearOrder} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🗑 Clear</button>}
+            {cart.length > 0 && <button onClick={clearOrder} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trash2 size={13} /> Clear</button>}
           </div>
 
           {/* Cart items */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {cart.length === 0 ? (
               <div style={{ padding: '48px 20px', textAlign: 'center', color: '#9ca3af' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🛒</div>
+                <div style={{ marginBottom: 12 }}><ShoppingCart size={36} color="#9ca3af" /></div>
                 <div style={{ fontSize: 14 }}>Tap a product to start</div>
               </div>
             ) : (
@@ -605,7 +606,7 @@ export default function PointOfSale({ nav }: Props) {
           {/* Charge button */}
           <button onClick={() => { if (cart.length) setShowPay(true); }} disabled={cart.length === 0}
             style={{ height: 56, border: 'none', background: cart.length === 0 ? '#9ca3af' : '#16a34a', color: '#fff', fontWeight: 800, fontSize: 18, cursor: cart.length ? 'pointer' : 'not-allowed', flexShrink: 0, letterSpacing: '0.5px', transition: 'background 0.15s' }}>
-            {cart.length === 0 ? 'Add items to charge' : `💳  Charge  ${fmt(total)}`}
+            {cart.length === 0 ? 'Add items to charge' : <><CreditCard size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />Charge  {fmt(total)}</>}
           </button>
         </div>
       </div>

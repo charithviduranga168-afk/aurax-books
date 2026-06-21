@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { Mail, Phone, MapPin, Globe, FileText, CreditCard, Users } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -132,19 +133,19 @@ function CustomerDetail({
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
                 <span className="badge badge-purple">{customer.customer_code}</span>
                 {customer.email && (
-                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>✉&nbsp;{customer.email}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={12} />{customer.email}</span>
                 )}
                 {customer.phone && (
-                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>📞&nbsp;{customer.phone}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Phone size={12} />{customer.phone}</span>
                 )}
                 {customer.address && (
-                  <span style={{ fontSize: 13, color: 'var(--text3)' }}>📍&nbsp;{customer.address}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{customer.address}</span>
                 )}
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowPortal(!showPortal)}>🌐 Portal</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowPortal(!showPortal)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Globe size={13} /> Portal</button>
             <button className="btn btn-secondary btn-sm" onClick={onEdit}>Edit</button>
             <button className="btn btn-danger btn-sm" onClick={onDelete}>Delete</button>
           </div>
@@ -209,7 +210,7 @@ function CustomerDetail({
         ) : tab === 'invoices' ? (
           invoices.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">📄</div>
+              <div className="empty-state-icon"><FileText size={32} color="#7c3aed" /></div>
               <h3>No invoices yet</h3>
               <p>Invoices for this customer will appear here</p>
             </div>
@@ -239,7 +240,7 @@ function CustomerDetail({
         ) : (
           receipts.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">💳</div>
+              <div className="empty-state-icon"><CreditCard size={32} color="#7c3aed" /></div>
               <h3>No payments yet</h3>
               <p>Payments received from this customer will appear here</p>
             </div>
@@ -409,7 +410,7 @@ export default function Customers({ onBack }: Props) {
           <div className="empty-state"><p>Loading...</p></div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">👥</div>
+            <div className="empty-state-icon"><Users size={32} color="#7c3aed" /></div>
             <h3>{search ? 'No customers found' : 'No customers yet'}</h3>
             <p>{search ? 'Try a different search' : 'Add your first customer to get started'}</p>
             {!search && <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openAdd}>+ Add Customer</button>}

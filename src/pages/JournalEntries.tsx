@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Check, X, Search, BookOpen } from 'lucide-react';
 
 interface JournalLine {
   account_id: string;
@@ -443,7 +444,7 @@ export default function JournalEntries() {
             <h3>Journal Lines</h3>
             {detailLines.length > 0 && (
               <span style={{ fontSize: 13, fontWeight: 700, color: dlBalanced ? '#059669' : '#dc2626' }}>
-                {dlBalanced ? '✓ Balanced' : '✗ Out of Balance'}
+                {dlBalanced ? <><Check size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />Balanced</> : <><X size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />Out of Balance</>}
               </span>
             )}
           </div>
@@ -656,7 +657,7 @@ export default function JournalEntries() {
               </div>
               <div className="total-row total-final">
                 <span className="total-label">
-                  {isBalanced ? '✓ Balanced' : '✗ Out of Balance'}
+                  {isBalanced ? <><Check size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />Balanced</> : <><X size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />Out of Balance</>}
                 </span>
                 <span
                   className="total-value"
@@ -688,7 +689,7 @@ export default function JournalEntries() {
         <div className="table-toolbar">
           <h3>All Entries</h3>
           <div className="search-wrap">
-            <span className="search-icon">🔍</span>
+            <Search size={13} className="search-icon" />
             <input
               placeholder="Search entries..."
               value={search}
@@ -702,7 +703,7 @@ export default function JournalEntries() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📒</div>
+            <div className="empty-state-icon"><BookOpen size={32} color="#7c3aed" /></div>
             <h3>No journal entries yet</h3>
             <p>Record manual double-entry transactions</p>
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { X } from 'lucide-react';
 
 interface Project {
   id: string; project_number: string; name: string;
@@ -211,7 +212,7 @@ export default function Projects() {
       <div className="card" style={{ maxWidth: 580, maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>{editProjectId ? 'Edit Project' : 'New Project'}</h2>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowProjectForm(false)}>✕</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowProjectForm(false)}><X size={14} /></button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>

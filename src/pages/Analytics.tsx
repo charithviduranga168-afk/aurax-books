@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Sector,
 } from 'recharts';
+import { TrendingUp, TrendingDown, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 
 interface MonthData { month: string; revenue: number; expenses: number; profit: number; }
 interface CashData  { month: string; in: number; out: number; }
@@ -168,13 +169,13 @@ export default function Analytics() {
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 28 }}>
         {[
-          { label: 'Total Revenue', value: fmtCur(totalRevenue), sub: 'Paid invoices', color: '#7c3aed', icon: '📈' },
-          { label: 'Total Expenses', value: fmtCur(totalExpenses), sub: 'Payments + expenses', color: '#dc2626', icon: '📉' },
-          { label: 'Net Profit', value: fmtCur(netProfit), sub: netProfit >= 0 ? 'Surplus' : 'Deficit', color: profitColor, icon: netProfit >= 0 ? '✅' : '⚠️' },
-          { label: 'Outstanding', value: fmtCur(totalOutstanding), sub: 'Unpaid invoices', color: '#d97706', icon: '⏳' },
+          { label: 'Total Revenue', value: fmtCur(totalRevenue), sub: 'Paid invoices', color: '#7c3aed', icon: <TrendingUp size={22} color="#7c3aed" /> },
+          { label: 'Total Expenses', value: fmtCur(totalExpenses), sub: 'Payments + expenses', color: '#dc2626', icon: <TrendingDown size={22} color="#dc2626" /> },
+          { label: 'Net Profit', value: fmtCur(netProfit), sub: netProfit >= 0 ? 'Surplus' : 'Deficit', color: profitColor, icon: netProfit >= 0 ? <CheckCircle size={22} color="#16a34a" /> : <AlertTriangle size={22} color="#d97706" /> },
+          { label: 'Outstanding', value: fmtCur(totalOutstanding), sub: 'Unpaid invoices', color: '#d97706', icon: <Clock size={22} color="#d97706" /> },
         ].map(k => (
           <div key={k.label} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ fontSize: 28, flexShrink: 0 }}>{k.icon}</div>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 10, background: 'rgba(124,58,237,0.07)' }}>{k.icon}</div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{k.label}</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: k.color, lineHeight: 1.2 }}>{k.value}</div>

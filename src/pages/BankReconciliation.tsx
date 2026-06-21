@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import * as XLSX from 'xlsx';
 import * as pdfjsLib from 'pdfjs-dist';
+import { Landmark, FolderOpen, AlertTriangle, ClipboardList, Check, CheckCircle, X, ArrowLeftRight } from 'lucide-react';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -545,7 +546,7 @@ export default function BankReconciliation() {
               const linked = coaAccounts.find(c => c.id === acc.coa_account_id);
               return (
                 <div key={acc.id} style={{ display: 'flex', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid var(--border)', gap: 16 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(124,58,237,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏦</div>
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(124,58,237,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Landmark size={20} color="#7c3aed" /></div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{acc.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>{acc.bank_name}{acc.account_number ? ` · ${acc.account_number}` : ''}</div>
@@ -570,7 +571,7 @@ export default function BankReconciliation() {
       {activeTab === 1 && (
         <div>
           {accounts.length === 0 ? (
-            <div className="empty-state"><div className="empty-state-icon">🏦</div><h3>No bank accounts</h3><p>Add a bank account in the Accounts tab first.</p><button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setActiveTab(0)}>Add Account</button></div>
+            <div className="empty-state"><div className="empty-state-icon"><Landmark size={32} color="#7c3aed" /></div><h3>No bank accounts</h3><p>Add a bank account in the Accounts tab first.</p><button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setActiveTab(0)}>Add Account</button></div>
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -608,7 +609,7 @@ export default function BankReconciliation() {
                     onClick={() => fileRef.current?.click()}
                     style={{ border: `2px dashed ${dragOver ? 'var(--brand)' : 'var(--border)'}`, borderRadius: 10, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', background: dragOver ? 'rgba(124,58,237,0.04)' : 'var(--bg2)', transition: 'all 0.15s' }}
                   >
-                    <div style={{ fontSize: 32, marginBottom: 10 }}>📁</div>
+                    <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><FolderOpen size={32} color="#7c3aed" /></div>
                     <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Drop your bank statement here or click to browse</div>
                     <div style={{ fontSize: 12, color: 'var(--text3)' }}>Supports Excel (.xlsx, .xls), CSV (.csv), and PDF (.pdf)</div>
                   </div>
@@ -616,7 +617,7 @@ export default function BankReconciliation() {
                   <div>
                     {parseError && (
                       <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>
-                        ⚠ {parseError}
+                        <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{parseError}
                       </div>
                     )}
 
@@ -668,7 +669,7 @@ export default function BankReconciliation() {
                                   <td style={{ padding: '5px 8px', color: 'var(--text3)', fontSize: 11 }}>{tx.balance || '—'}</td>
                                   <td style={{ padding: '5px 6px' }}>
                                     <button onClick={() => setParsedTxs(prev => prev.filter((_, i) => i !== idx))}
-                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 16, lineHeight: 1 }}>✕</button>
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center' }}><X size={15} /></button>
                                   </td>
                                 </tr>
                               ))}
@@ -723,7 +724,7 @@ export default function BankReconciliation() {
               <div className="table-wrap">
                 <div className="table-toolbar"><h3>Bank Statement — {account?.name}</h3></div>
                 {transactions.length === 0 ? (
-                  <div className="empty-state"><div className="empty-state-icon">📋</div><h3>No transactions</h3><p>Upload a bank statement or add lines manually</p></div>
+                  <div className="empty-state"><div className="empty-state-icon"><ClipboardList size={32} color="#7c3aed" /></div><h3>No transactions</h3><p>Upload a bank statement or add lines manually</p></div>
                 ) : (
                   <table>
                     <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th style={{ textAlign: 'right' }}>Credit (In)</th><th style={{ textAlign: 'right' }}>Debit (Out)</th><th style={{ textAlign: 'right' }}>Balance</th><th>Status</th><th></th></tr></thead>
@@ -738,7 +739,7 @@ export default function BankReconciliation() {
                           <td style={{ textAlign: 'right', color: 'var(--text2)' }}>{tx.balance !== null ? fmt(tx.balance) : '—'}</td>
                           <td>
                             <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: tx.is_reconciled ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: tx.is_reconciled ? '#16a34a' : '#d97706' }}>
-                              {tx.is_reconciled ? '✓ Matched' : 'Unmatched'}
+                              {tx.is_reconciled ? <><Check size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />Matched</> : 'Unmatched'}
                             </span>
                           </td>
                           <td>
@@ -762,7 +763,7 @@ export default function BankReconciliation() {
       {activeTab === 2 && (
         <div>
           {accounts.length === 0 ? (
-            <div className="empty-state"><div className="empty-state-icon">🏦</div><h3>No bank accounts</h3><button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setActiveTab(0)}>Add Account</button></div>
+            <div className="empty-state"><div className="empty-state-icon"><Landmark size={32} color="#7c3aed" /></div><h3>No bank accounts</h3><button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setActiveTab(0)}>Add Account</button></div>
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -786,14 +787,14 @@ export default function BankReconciliation() {
                       <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2, textTransform: 'uppercase' }}>Bank</div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{fmt(bankAmt)}</div>
                     </div>
-                    <div style={{ fontSize: 18, color: 'var(--text3)' }}>↔</div>
+                    <div style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center' }}><ArrowLeftRight size={18} /></div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2, textTransform: 'uppercase' }}>Book</div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{fmt(bookAmt)}</div>
                     </div>
                     <div style={{ flex: 1, textAlign: 'center' }}>
                       {match ? (
-                        <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 14 }}>✓ Amounts match</span>
+                        <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={14} /> Amounts match</span>
                       ) : (
                         <span style={{ fontWeight: 700, color: '#dc2626', fontSize: 14 }}>Difference: {fmt(diff)}</span>
                       )}

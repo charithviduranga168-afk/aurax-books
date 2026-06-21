@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { X } from 'lucide-react';
 
 interface EcomSettings {
   id?: string;
@@ -454,7 +455,7 @@ export default function ECommerce() {
           <div className="card" style={{ width: 480, padding: 28 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ margin: 0, fontSize: 16 }}>{editEcomId ? 'Edit Product Listing' : 'Add Product to Store'}</h3>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowProductDialog(false)}>✕</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowProductDialog(false)}><X size={14} /></button>
             </div>
             <div className="form-grid">
               {!editEcomId && (

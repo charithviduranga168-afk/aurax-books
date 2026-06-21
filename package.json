@@ -14,6 +14,7 @@
     "@types/md5": "^2.3.6",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lucide-react": "^1.21.0",
     "md5": "^2.3.0",
     "pdfjs-dist": "^6.0.227",
     "react": "^19.2.6",

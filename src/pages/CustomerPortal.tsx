@@ -3,6 +3,7 @@ import md5 from 'md5';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../supabase';
+import { BookOpen, Lock, AlertTriangle, CreditCard, CheckCircle, FileText, Package, Check } from 'lucide-react';
 
 const PAYHERE_MERCHANT = '1233250';
 const PAYHERE_SECRET = 'MTIzNDU0OTgxNDMyNzE1OTQ2NTMzMTIzMTI2MDczMTA3MzAxNTM5Ng==';
@@ -405,7 +406,7 @@ export default function CustomerPortal() {
     return (
       <div style={{ minHeight: '100vh', background: '#f8f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📒</div>
+          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><BookOpen size={32} color="#7c3aed" /></div>
           <div style={{ fontWeight: 700, color: '#7c3aed' }}>Loading your portal...</div>
         </div>
       </div>
@@ -416,7 +417,7 @@ export default function CustomerPortal() {
     return (
       <div style={{ minHeight: '100vh', background: '#f8f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Lock size={40} color="#7c3aed" /></div>
           <h2 style={{ color: '#374151', marginBottom: 8 }}>Portal Access Not Set Up</h2>
           <p style={{ color: '#6b7280', marginBottom: 24 }}>Your account doesn't have portal access yet. Please contact the company to activate your portal.</p>
           <button className="btn btn-secondary" onClick={() => supabase.auth.signOut()}>Sign Out</button>
@@ -657,7 +658,7 @@ export default function CustomerPortal() {
         {/* Overdue alert */}
         {overdueInvoices.length > 0 && (
           <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 18 }}>⚠️</span>
+            <AlertTriangle size={18} color="#dc2626" />
             <div>
               <strong style={{ color: '#dc2626' }}>Overdue Invoices</strong>
               <span style={{ color: '#dc2626', fontSize: 13, marginLeft: 8 }}>{overdueInvoices.length} invoice{overdueInvoices.length > 1 ? 's' : ''} past due date — please contact us to arrange payment.</span>
@@ -668,13 +669,13 @@ export default function CustomerPortal() {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
           {[
-            { label: 'Outstanding Balance', value: fmt(outstanding), color: outstanding > 0 ? '#dc2626' : '#16a34a', icon: '💳' },
-            { label: 'Total Paid', value: fmt(totalPaid), color: '#16a34a', icon: '✅' },
-            { label: 'Total Invoices', value: invoices.length, color: '#7c3aed', icon: '📄' },
-            { label: 'Sales Orders', value: orders.length, color: '#0284c7', icon: '📦' },
+            { label: 'Outstanding Balance', value: fmt(outstanding), color: outstanding > 0 ? '#dc2626' : '#16a34a', icon: <CreditCard size={22} color={outstanding > 0 ? '#dc2626' : '#16a34a'} /> },
+            { label: 'Total Paid', value: fmt(totalPaid), color: '#16a34a', icon: <CheckCircle size={22} color="#16a34a" /> },
+            { label: 'Total Invoices', value: invoices.length, color: '#7c3aed', icon: <FileText size={22} color="#7c3aed" /> },
+            { label: 'Sales Orders', value: orders.length, color: '#0284c7', icon: <Package size={22} color="#0284c7" /> },
           ].map(s => (
             <div key={s.label} style={{ background: 'white', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
+              <div style={{ marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{s.label}</div>
             </div>
@@ -721,7 +722,7 @@ export default function CustomerPortal() {
                         <td style={{ padding: '14px 20px', fontWeight: 700, color: '#7c3aed', textDecoration: 'underline', textDecorationColor: '#c4b5fd' }}>{inv.invoice_number}</td>
                         <td style={{ padding: '14px 20px', fontSize: 14, color: '#374151' }}>{inv.date}</td>
                         <td style={{ padding: '14px 20px', fontSize: 14, color: isOverdue ? '#dc2626' : '#374151', fontWeight: isOverdue ? 700 : 400 }}>
-                          {inv.due_date || '—'}{isOverdue ? ' ⚠' : ''}
+                          {inv.due_date || '—'}{isOverdue ? <AlertTriangle size={12} color="#dc2626" style={{ verticalAlign: 'middle', marginLeft: 4 }} /> : null}
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, fontSize: 15 }}>{fmt(inv.total)}</td>
                         <td style={{ padding: '14px 20px' }}>{statusBadge(inv.status)}</td>
@@ -732,7 +733,7 @@ export default function CustomerPortal() {
                               Pay Now
                             </button>
                           )}
-                          {inv.status === 'paid' && <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✓ Paid</span>}
+                          {inv.status === 'paid' && <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}><Check size={12} /> Paid</span>}
                         </td>
                       </tr>
                     );
