@@ -52,8 +52,8 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 | hr | src/pages/HR.tsx ✓ list→detail (employee detail in Employees tab) |
 | mrp | src/pages/MRP.tsx ✓ list→detail (click PO → BOM explosion) |
 | stockadjustments | src/pages/StockAdjustments.tsx ← PENDING step 14 |
-| coa | src/pages/ChartOfAccounts.tsx ← PENDING step 15 |
-| expenses | src/pages/Expenses.tsx ← PENDING step 16 |
+| coa | src/pages/ChartOfAccounts.tsx ✓ list→detail (click account → journal entry lines) |
+| expenses | src/pages/Expenses.tsx ✓ list→detail (click expense → details, KPIs, PDF) |
 | qc | src/pages/QualityControl.tsx ← PENDING step 20 |
 | projects | src/pages/Projects.tsx ← PENDING step 21 |
 | manufacturing | src/pages/Manufacturing.tsx (production orders — may be done) |
@@ -74,8 +74,8 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 | Step | Module | File | Detail content |
 |------|--------|------|----------------|
 | 14 | Stock Adjustments | StockAdjustments.tsx | list → detail: adjustment lines, reason, product impacts |
-| 15 | Chart of Accounts | ChartOfAccounts.tsx | list → detail: account info + journal entries for that account |
-| 16 | Expenses | Expenses.tsx | list → detail: expense info, receipt, category, status |
+| ~~15~~ | ~~Chart of Accounts~~ | ~~ChartOfAccounts.tsx~~ | ✓ Done |
+| ~~16~~ | ~~Expenses~~ | ~~Expenses.tsx~~ | ✓ Done |
 | 20 | QC | QualityControl.tsx | list → detail: inspection results, pass/fail items |
 | 21 | Projects | Projects.tsx | list → detail: tasks, milestones, team members |
 
