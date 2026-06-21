@@ -29,7 +29,27 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_STEPS = ['Draft', 'Confirmed', 'Invoiced'];
 
+const STATUS_COLOR: Record<string, string> = {
+  Draft: '#6b7280', Confirmed: '#7c3aed', Invoiced: '#059669', Cancelled: '#dc2626',
+};
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+      {label}
+    </button>
+  );
+}
+
+const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+
 export default function SalesOrders({ onCreateInvoice }: Props) {
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selected, setSelected] = useState<any | null>(null);
+  const [selectedLines, setSelectedLines] = useState<SoLine[]>([]);
+  const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+
   const [sos, setSos] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -41,28 +61,15 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingSO, setEditingSO] = useState<any>(null);
-  const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    expiry_date: '',
-    customer_id: '',
-    customer_name: '',
-    notes: '',
-    tax_rate: '0',
-  });
-  const [lines, setLines] = useState<SoLine[]>([
-    { product_id: '', product_name: '', qty: 1, unit_price: 0, discount_pct: 0, tax_rate: 0, line_total: 0 },
-  ]);
-
-  const [showView, setShowView] = useState(false);
-  const [viewSO, setViewSO] = useState<any>(null);
-  const [viewLines, setViewLines] = useState<SoLine[]>([]);
-  const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), expiry_date: '', customer_id: '', customer_name: '', notes: '', tax_rate: '0' });
+  const [lines, setLines] = useState<SoLine[]>([{ product_id: '', product_name: '', qty: 1, unit_price: 0, discount_pct: 0, tax_rate: 0, line_total: 0 }]);
 
   const [dialog, setDialog] = useState<{ message: string; onConfirm?: () => void } | null>(null);
   const showAlert = (msg: string) => setDialog({ message: msg });
   const showConfirm = (msg: string, fn: () => void) => setDialog({ message: msg, onConfirm: fn });
   const clampNonNeg = (v: string) => Math.max(0, parseFloat(v) || 0);
-  const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+
+  const [detailTab, setDetailTab] = useState<'lines' | 'details'>('lines');
 
   useEffect(() => { loadAll(); }, []);
 
@@ -108,11 +115,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
     updated[i] = { ...updated[i], [field]: value };
     if (field === 'product_id') {
       const prod = products.find(p => p.id === value);
-      if (prod) {
-        updated[i].product_name = prod.name;
-        updated[i].unit_price = prod.sales_price || 0;
-        updated[i].tax_rate = parseFloat(form.tax_rate) || 0;
-      }
+      if (prod) { updated[i].product_name = prod.name; updated[i].unit_price = prod.sales_price || 0; updated[i].tax_rate = parseFloat(form.tax_rate) || 0; }
     }
     const qty = updated[i].qty || 0;
     const price = updated[i].unit_price || 0;
@@ -167,16 +170,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
 
     if (soId) {
       await supabase.from('sales_order_lines').insert(
-        validLines.map(l => ({
-          so_id: soId,
-          product_id: l.product_id,
-          product_name: l.product_name,
-          qty: l.qty,
-          unit_price: l.unit_price,
-          discount_pct: l.discount_pct,
-          tax_rate: l.tax_rate,
-          line_total: l.line_total,
-        }))
+        validLines.map(l => ({ so_id: soId, product_id: l.product_id, product_name: l.product_name, qty: l.qty, unit_price: l.unit_price, discount_pct: l.discount_pct, tax_rate: l.tax_rate, line_total: l.line_total }))
       );
     }
 
@@ -186,55 +180,40 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
     loadAll();
   }
 
-  async function openView(so: any) {
-    setViewSO(so);
+  async function openDetail(so: any) {
+    setSelected(so);
     setLinkedInvoice(null);
     const [{ data: lineData }, invRes] = await Promise.all([
       supabase.from('sales_order_lines').select('*').eq('so_id', so.id),
-      so.invoice_id
-        ? supabase.from('invoices').select('invoice_number,status').eq('id', so.invoice_id).maybeSingle()
-        : Promise.resolve({ data: null }),
+      so.invoice_id ? supabase.from('invoices').select('invoice_number,status').eq('id', so.invoice_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
-    setViewLines((lineData || []).map((l: any) => ({
-      id: l.id, product_id: l.product_id, product_name: l.product_name,
-      qty: l.qty, unit_price: l.unit_price, discount_pct: l.discount_pct || 0,
-      tax_rate: l.tax_rate || 0, line_total: l.line_total,
-    })));
+    setSelectedLines((lineData || []).map((l: any) => ({ id: l.id, product_id: l.product_id, product_name: l.product_name, qty: l.qty, unit_price: l.unit_price, discount_pct: l.discount_pct || 0, tax_rate: l.tax_rate || 0, line_total: l.line_total })));
     setLinkedInvoice(invRes.data || null);
-    setShowView(true);
+    setDetailTab('lines');
+    setView('detail');
   }
 
   async function openEdit(so: any) {
     setEditingSO(so);
-    setForm({
-      date: so.date,
-      expiry_date: so.expiry_date || '',
-      customer_id: so.customer_id || '',
-      customer_name: so.customer_name || '',
-      notes: so.notes || '',
-      tax_rate: '0',
-    });
+    setForm({ date: so.date, expiry_date: so.expiry_date || '', customer_id: so.customer_id || '', customer_name: so.customer_name || '', notes: so.notes || '', tax_rate: '0' });
     const { data } = await supabase.from('sales_order_lines').select('*').eq('so_id', so.id);
-    setLines((data || []).map((l: any) => ({
-      id: l.id, product_id: l.product_id, product_name: l.product_name,
-      qty: l.qty, unit_price: l.unit_price, discount_pct: l.discount_pct || 0,
-      tax_rate: l.tax_rate || 0, line_total: l.line_total,
-    })));
+    setLines((data || []).map((l: any) => ({ id: l.id, product_id: l.product_id, product_name: l.product_name, qty: l.qty, unit_price: l.unit_price, discount_pct: l.discount_pct || 0, tax_rate: l.tax_rate || 0, line_total: l.line_total })));
     setShowForm(true);
-    setShowView(false);
+    setView('list');
   }
 
   function handleDelete(so: any) {
     showConfirm(`Delete quotation ${so.so_number}? This cannot be undone.`, async () => {
       await supabase.from('sales_order_lines').delete().eq('so_id', so.id);
       await supabase.from('sales_orders').delete().eq('id', so.id);
+      if (view === 'detail') setView('list');
       loadAll();
     });
   }
 
   async function updateStatus(so: any, newStatus: string) {
     await supabase.from('sales_orders').update({ status: newStatus }).eq('id', so.id);
-    setViewSO((prev: any) => prev?.id === so.id ? { ...prev, status: newStatus } : prev);
+    setSelected((prev: any) => prev?.id === so.id ? { ...prev, status: newStatus } : prev);
     loadAll();
   }
 
@@ -246,56 +225,31 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
   function exportPDF(so: any, lineItems: SoLine[]) {
     const doc = new jsPDF();
     const fmtN = (n: number) => (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
-
-    doc.setFillColor(248, 249, 252);
-    doc.rect(0, 0, 210, 42, 'F');
-    doc.setFillColor(79, 53, 200);
-    doc.rect(0, 0, 4, 42, 'F');
-    doc.setTextColor(79, 53, 200);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(248, 249, 252); doc.rect(0, 0, 210, 42, 'F');
+    doc.setFillColor(79, 53, 200); doc.rect(0, 0, 4, 42, 'F');
+    doc.setTextColor(79, 53, 200); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
     doc.text(company.company_name || 'Company Name', 12, 14);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 120, 120);
     doc.text('SALES ORDER / QUOTATION', 12, 21);
     let cy = 27;
     if (company.address) { doc.text(company.address, 12, cy); cy += 5; }
     if (company.phone) { doc.text('Tel: ' + company.phone, 12, cy); cy += 5; }
     if (company.email) { doc.text(company.email, 12, cy); }
-
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 30); doc.setFontSize(15); doc.setFont('helvetica', 'bold');
     doc.text(so.so_number, 198, 14, { align: 'right' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
     doc.text('Date: ' + so.date, 198, 22, { align: 'right' });
     if (so.expiry_date) doc.text('Valid Until: ' + so.expiry_date, 198, 28, { align: 'right' });
-
-    doc.setDrawColor(79, 53, 200);
-    doc.setLineWidth(0.5);
-    doc.line(0, 42, 210, 42);
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(120, 120, 120);
+    doc.setDrawColor(79, 53, 200); doc.setLineWidth(0.5); doc.line(0, 42, 210, 42);
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 120, 120);
     doc.text('CUSTOMER:', 12, 50);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30);
     doc.text(so.customer_name || '—', 12, 57);
-
     const sc: Record<string, number[]> = { Confirmed: [79, 53, 200], Invoiced: [18, 183, 106], Cancelled: [240, 68, 56] };
     const c = sc[so.status] || [108, 171, 238];
-    doc.setFillColor(c[0], c[1], c[2]);
-    doc.roundedRect(150, 47, 44, 9, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(c[0], c[1], c[2]); doc.roundedRect(150, 47, 44, 9, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
     doc.text(so.status?.toUpperCase() || 'DRAFT', 172, 53, { align: 'center' });
-
     autoTable(doc, {
       startY: 68,
       head: [['#', 'Product', 'Qty', 'Unit Price (Rs.)', 'Disc%', 'Tax%', 'Total (Rs.)']],
@@ -306,39 +260,22 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
       columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 5: { halign: 'right' } },
       margin: { left: 12, right: 12 },
     });
-
     const finalY = (doc as any).lastAutoTable.finalY + 6;
     const lSub = lineItems.reduce((s, l) => s + (l.line_total || 0), 0);
     const lTax = lineItems.reduce((s, l) => s + (l.line_total || 0) * ((l.tax_rate || 0) / 100), 0);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
     doc.text('Subtotal:', 140, finalY + 4); doc.text('Rs. ' + fmtN(lSub), 198, finalY + 4, { align: 'right' });
     doc.text('Tax:', 140, finalY + 10); doc.text('Rs. ' + fmtN(lTax), 198, finalY + 10, { align: 'right' });
-    doc.setFillColor(79, 53, 200);
-    doc.rect(120, finalY + 14, 78, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('TOTAL:', 125, finalY + 22);
-    doc.text('Rs. ' + fmtN(lSub + lTax), 196, finalY + 22, { align: 'right' });
-    if (so.notes) {
-      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-      doc.text('Notes: ' + so.notes, 12, finalY + 34);
-    }
+    doc.setFillColor(79, 53, 200); doc.rect(120, finalY + 14, 78, 12, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('TOTAL:', 125, finalY + 22); doc.text('Rs. ' + fmtN(lSub + lTax), 196, finalY + 22, { align: 'right' });
+    if (so.notes) { doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.text('Notes: ' + so.notes, 12, finalY + 34); }
     const pageH = doc.internal.pageSize.height;
-    doc.setFillColor(248, 249, 252);
-    doc.rect(0, pageH - 14, 210, 14, 'F');
-    doc.setFillColor(79, 53, 200);
-    doc.rect(0, pageH - 14, 4, 14, 'F');
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(8);
+    doc.setFillColor(248, 249, 252); doc.rect(0, pageH - 14, 210, 14, 'F');
+    doc.setFillColor(79, 53, 200); doc.rect(0, pageH - 14, 4, 14, 'F');
+    doc.setTextColor(150, 150, 150); doc.setFontSize(8);
     doc.text('Generated by LedgerX', 105, pageH - 6, { align: 'center' });
     doc.save(so.so_number + '.pdf');
-  }
-
-  function statusBadge(status: string) {
-    return <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>{status}</span>;
   }
 
   function statusPipeline(currentStatus: string) {
@@ -350,12 +287,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
           const isCurrent = i === currentIdx && currentStatus !== 'Cancelled';
           return (
             <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{
-                padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                background: currentStatus === 'Cancelled' && step === 'Draft' ? '#fef3f2' : done ? (isCurrent ? 'var(--brand)' : 'var(--green-bg)') : 'var(--bg3)',
-                color: currentStatus === 'Cancelled' && step === 'Draft' ? '#f04438' : done ? (isCurrent ? '#fff' : '#12b76a') : 'var(--text3)',
-                border: `1px solid ${currentStatus === 'Cancelled' && step === 'Draft' ? '#fecdca' : done ? (isCurrent ? 'transparent' : 'var(--green)') : 'var(--border)'}`,
-              }}>
+              <div style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: currentStatus === 'Cancelled' && step === 'Draft' ? '#fef3f2' : done ? (isCurrent ? 'var(--brand)' : 'var(--green-bg)') : 'var(--bg3)', color: currentStatus === 'Cancelled' && step === 'Draft' ? '#f04438' : done ? (isCurrent ? '#fff' : '#12b76a') : 'var(--text3)', border: `1px solid ${currentStatus === 'Cancelled' && step === 'Draft' ? '#fecdca' : done ? (isCurrent ? 'transparent' : 'var(--green)') : 'var(--border)'}` }}>
                 {currentStatus === 'Cancelled' && step === 'Draft' ? '✕ Cancelled' : step}
               </div>
               {i < STATUS_STEPS.length - 1 && <span style={{ color: 'var(--text3)', fontSize: '12px' }}>→</span>}
@@ -366,24 +298,11 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
     );
   }
 
-  function flowBar(soNumber: string, invoice: any | null) {
-    const chip = (label: string, tone: 'done' | 'active' | 'pending') => (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', padding: '6px 14px', borderRadius: '20px',
-        fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' as const,
-        background: tone === 'done' ? 'var(--green-bg)' : tone === 'active' ? '#ede9ff' : 'var(--bg3)',
-        color: tone === 'done' ? '#12b76a' : tone === 'active' ? 'var(--brand)' : 'var(--text3)',
-        border: `1px solid ${tone === 'done' ? 'var(--green)' : tone === 'active' ? 'var(--brand)' : 'var(--border)'}`,
-      }}>{label}</span>
-    );
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const, padding: '14px 18px', background: 'var(--bg3)', borderRadius: '10px', marginBottom: '20px' }}>
-        {chip(`Sales Order (${soNumber})`, 'active')}
-        <span style={{ color: 'var(--text3)' }}>→</span>
-        {chip(invoice ? `Invoice (${invoice.invoice_number})` : 'Invoice — pending', invoice ? 'done' : 'pending')}
-      </div>
-    );
-  }
+  const canEdit = (so: any) => so.status === 'Draft';
+  const canDelete = (so: any) => so.status === 'Draft';
+  const canConfirm = (so: any) => so.status === 'Draft';
+  const canInvoice = (so: any) => so.status === 'Confirmed';
+  const canCancel = (so: any) => ['Draft', 'Confirmed'].includes(so.status);
 
   const tabFiltered = sos.filter(s => {
     if (activeTab === 'quotations') return s.status === 'Draft';
@@ -399,22 +318,129 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
 
   const quotationCount = sos.filter(s => s.status === 'Draft').length;
   const confirmedCount = sos.filter(s => s.status === 'Confirmed').length;
-  const invoicedCount  = sos.filter(s => s.status === 'Invoiced').length;
+  const invoicedCount = sos.filter(s => s.status === 'Invoiced').length;
 
   const tabStyle = (active: boolean) => ({
     padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
     background: active ? 'var(--brand)' : 'var(--bg2)',
     color: active ? '#fff' : 'var(--text2)',
     border: active ? 'none' : '1px solid var(--border)',
-    transition: 'all 0.15s',
   });
 
-  const canEdit    = (so: any) => so.status === 'Draft';
-  const canDelete  = (so: any) => so.status === 'Draft';
-  const canConfirm = (so: any) => so.status === 'Draft';
-  const canInvoice = (so: any) => so.status === 'Confirmed';
-  const canCancel  = (so: any) => ['Draft', 'Confirmed'].includes(so.status);
+  // ── Detail view ──
+  if (view === 'detail' && selected) {
+    const lineSub = selectedLines.reduce((s, l) => s + (l.line_total || 0), 0);
+    const lineTax = selectedLines.reduce((s, l) => s + (l.line_total || 0) * ((l.tax_rate || 0) / 100), 0);
+    return (
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <BackBtn label="Back to Sales Orders" onClick={() => { setView('list'); setSelected(null); }} />
 
+        {/* Hero */}
+        <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text1)', letterSpacing: '-0.5px', marginBottom: 8 }}>{selected.so_number}</div>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: (STATUS_COLOR[selected.status] || '#6b7280') + '18', color: STATUS_COLOR[selected.status] || '#6b7280' }}>{selected.status}</span>
+              </div>
+              {statusPipeline(selected.status)}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text2)' }}>
+                <span><strong>Customer:</strong> {selected.customer_name}</span>
+                <span><strong>Date:</strong> {selected.date}</span>
+                {selected.expiry_date && <span><strong>Valid Until:</strong> {selected.expiry_date}</span>}
+              </div>
+              {linkedInvoice && (
+                <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--green-bg)', borderRadius: 8, border: '1px solid var(--green)', display: 'inline-flex', gap: 12, alignItems: 'center', fontSize: 13 }}>
+                  <span style={{ fontWeight: 700, color: '#12b76a' }}>Linked Invoice:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{linkedInvoice.invoice_number}</span>
+                  <span className={`badge ${linkedInvoice.status === 'Paid' ? 'badge-green' : linkedInvoice.status === 'Partial' ? 'badge-yellow' : 'badge-red'}`}>{linkedInvoice.status}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button className="btn btn-primary btn-sm" onClick={() => exportPDF(selected, selectedLines)}>PDF</button>
+              {canConfirm(selected) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(selected, 'Confirmed')}>Confirm</button>}
+              {canInvoice(selected) && <button className="btn btn-primary btn-sm" onClick={() => createInvoice(selected)}>Create Invoice</button>}
+              {canEdit(selected) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(selected)}>Edit</button>}
+              {canCancel(selected) && <button className="btn btn-danger btn-sm" onClick={() => showConfirm(`Cancel ${selected.so_number}?`, () => updateStatus(selected, 'Cancelled'))}>Cancel</button>}
+            </div>
+          </div>
+        </div>
+
+        {/* KPI row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+          {[
+            { label: 'Subtotal', value: fmt(selected.subtotal), color: '#7c3aed' },
+            { label: 'Tax', value: fmt(selected.tax_amount), color: '#d97706' },
+            { label: 'Discount', value: fmt(0), color: '#6b7280' },
+            { label: 'Total', value: fmt(selected.total), color: '#059669' },
+          ].map(k => (
+            <div key={k.label} className="card" style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: k.color, letterSpacing: '-0.5px' }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Detail tabs */}
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['lines', 'details'] as const).map(t => (
+                <button key={t} onClick={() => setDetailTab(t)} style={{ padding: '7px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: detailTab === t ? 'var(--brand-light)' : 'transparent', color: detailTab === t ? 'var(--brand)' : 'var(--text2)' }}>
+                  {t === 'lines' ? 'Line Items' : 'Details'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {detailTab === 'lines' ? (
+            selectedLines.length === 0 ? (
+              <div className="empty-state"><h3>No line items</h3></div>
+            ) : (
+              <>
+                <table>
+                  <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Disc%</th><th>Tax%</th><th>Total</th></tr></thead>
+                  <tbody>
+                    {selectedLines.map((l, i) => (
+                      <tr key={i}>
+                        <td style={{ color: 'var(--text2)', textAlign: 'center' }}>{i + 1}</td>
+                        <td style={{ fontWeight: 500 }}>{l.product_name}</td>
+                        <td>{l.qty}</td>
+                        <td>{fmt(l.unit_price)}</td>
+                        <td style={{ color: 'var(--text2)' }}>{l.discount_pct}%</td>
+                        <td style={{ color: 'var(--text2)' }}>{l.tax_rate}%</td>
+                        <td style={{ fontWeight: 600 }}>{fmt(l.line_total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ textAlign: 'right', padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ color: 'var(--text2)', fontSize: '13px', marginBottom: '4px' }}>Subtotal: {fmt(lineSub)}</div>
+                  <div style={{ color: 'var(--text2)', fontSize: '13px', marginBottom: '4px' }}>Tax: {fmt(lineTax)}</div>
+                  <div style={{ fontWeight: 700, fontSize: '16px' }}>Total: {fmt(lineSub + lineTax)}</div>
+                </div>
+              </>
+            )
+          ) : (
+            <div style={{ padding: 20 }}>
+              {selected.notes ? (
+                <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--bg3)', borderRadius: 8, fontSize: 13, color: 'var(--text2)' }}>
+                  <strong>Notes:</strong> {selected.notes}
+                </div>
+              ) : <p style={{ color: 'var(--text3)' }}>No additional details.</p>}
+              {selected.expiry_date && (
+                <div style={{ padding: '12px 16px', background: 'var(--bg3)', borderRadius: 8, fontSize: 13 }}>
+                  <strong>Valid Until:</strong> {selected.expiry_date}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── List view ──
   return (
     <div>
       <div className="page-header">
@@ -423,9 +449,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
           <div className="page-sub">Quotation → Confirm → Invoice · {sos.length} total</div>
         </div>
         {!showForm && (
-          <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>
-            + New Quotation
-          </button>
+          <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ New Quotation</button>
         )}
       </div>
 
@@ -490,8 +514,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
               </div>
               <div className="form-group full">
                 <label>Notes / Terms</label>
-                <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                  placeholder="Delivery terms, payment terms, special instructions..." />
+                <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Delivery terms, payment terms, special instructions..." />
               </div>
             </div>
 
@@ -518,30 +541,18 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
                           {products.map(p => <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock_qty})</option>)}
                         </select>
                       </td>
-                      <td>
-                        <input type="number" min="0" value={line.qty} onChange={e => updateLine(i, 'qty', clampNonNeg(e.target.value))} />
-                      </td>
-                      <td>
-                        <input type="number" min="0" value={line.unit_price} onChange={e => updateLine(i, 'unit_price', clampNonNeg(e.target.value))} />
-                      </td>
-                      <td>
-                        <input type="number" min="0" max="100" value={line.discount_pct} onChange={e => updateLineDiscount(i, e.target.value)} />
-                      </td>
-                      <td>
-                        <input type="number" min="0" max="100" value={line.tax_rate}
-                          onChange={e => { const u = [...lines]; u[i] = { ...u[i], tax_rate: clampNonNeg(e.target.value) }; setLines(u); }} />
-                      </td>
+                      <td><input type="number" min="0" value={line.qty} onChange={e => updateLine(i, 'qty', clampNonNeg(e.target.value))} /></td>
+                      <td><input type="number" min="0" value={line.unit_price} onChange={e => updateLine(i, 'unit_price', clampNonNeg(e.target.value))} /></td>
+                      <td><input type="number" min="0" max="100" value={line.discount_pct} onChange={e => updateLineDiscount(i, e.target.value)} /></td>
+                      <td><input type="number" min="0" max="100" value={line.tax_rate} onChange={e => { const u = [...lines]; u[i] = { ...u[i], tax_rate: clampNonNeg(e.target.value) }; setLines(u); }} /></td>
                       <td style={{ fontWeight: 600, color: 'var(--brand)', paddingLeft: '8px' }}>{fmt(line.line_total)}</td>
-                      <td>
-                        <button className="btn btn-danger btn-sm" style={{ padding: '4px 8px' }} onClick={() => removeLine(i)}>✕</button>
-                      </td>
+                      <td><button className="btn btn-danger btn-sm" style={{ padding: '4px 8px' }} onClick={() => removeLine(i)}>✕</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <button className="btn btn-secondary btn-sm" onClick={addLine} style={{ marginTop: '10px' }}>+ Add Line</button>
             </div>
-
             <div className="totals-box">
               <div className="total-row"><span className="total-label">Subtotal:</span><span className="total-value">{fmt(subtotal)}</span></div>
               <div className="total-row"><span className="total-label">Tax:</span><span className="total-value">{fmt(taxAmt)}</span></div>
@@ -550,9 +561,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
           </div>
           <div className="inline-panel-footer">
             <button className="btn btn-secondary" onClick={() => { setShowForm(false); resetForm(); }}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingSO ? 'Update SO' : 'Save Quotation'}
-            </button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : editingSO ? 'Update SO' : 'Save Quotation'}</button>
           </div>
         </div>
       )}
@@ -562,7 +571,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
           <h3>Sales Orders</h3>
           <div className="table-actions">
             <div className="search-wrap">
-              <span className="search-icon">🔍</span>
+              <svg className="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               <input placeholder="Search SO or customer..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </div>
@@ -572,41 +581,25 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
           <div className="empty-state"><p>Loading...</p></div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📝</div>
             <h3>{activeTab === 'all' ? 'No sales orders yet' : 'None in this category'}</h3>
             <p>{activeTab === 'all' ? 'Create your first quotation to start the Sales cycle' : 'Switch to All to see all orders'}</p>
-            {activeTab === 'all' && (
-              <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => { resetForm(); setShowForm(true); }}>
-                + New Quotation
-              </button>
-            )}
+            {activeTab === 'all' && <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => { resetForm(); setShowForm(true); }}>+ New Quotation</button>}
           </div>
         ) : (
           <table>
             <thead>
-              <tr>
-                <th>SO #</th><th>Date</th><th>Customer</th><th>Valid Until</th><th>Total</th><th>Status</th><th>Actions</th>
-              </tr>
+              <tr><th>SO #</th><th>Date</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {filtered.map(so => (
-                <tr key={so.id}>
+                <tr key={so.id} onClick={() => openDetail(so)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 700, color: 'var(--brand)' }}>{so.so_number}</td>
                   <td style={{ color: 'var(--text2)' }}>{so.date}</td>
                   <td style={{ fontWeight: 500 }}>{so.customer_name}</td>
-                  <td style={{ color: so.expiry_date && new Date(so.expiry_date) < new Date() && so.status === 'Draft' ? 'var(--red)' : 'var(--text2)' }}>
-                    {so.expiry_date || '—'}
-                  </td>
                   <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(so.total)}</td>
-                  <td>{statusBadge(so.status)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => openView(so)}>View</button>
-                      {canEdit(so) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(so)}>Edit</button>}
-                      {canConfirm(so) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(so, 'Confirmed')}>Confirm</button>}
-                      {canInvoice(so) && <button className="btn btn-primary btn-sm" onClick={() => createInvoice(so)}>Create Invoice</button>}
-                      {canDelete(so) && <button className="btn btn-danger btn-sm" onClick={() => handleDelete(so)}>Delete</button>}
-                    </div>
+                  <td><span className={`badge ${STATUS_BADGE[so.status] || 'badge-blue'}`}>{so.status}</span></td>
+                  <td style={{ width: 32, textAlign: 'right' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text3)' }}><polyline points="9 18 15 12 9 6" /></svg>
                   </td>
                 </tr>
               ))}
@@ -615,91 +608,6 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
         )}
       </div>
 
-      {showView && viewSO && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowView(false)}>
-          <div className="modal" style={{ maxWidth: '820px' }}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">{viewSO.so_number}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text2)', marginTop: '2px' }}>{viewSO.customer_name}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary btn-sm" onClick={() => exportPDF(viewSO, viewLines)}>⬇ PDF</button>
-                {canConfirm(viewSO) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(viewSO, 'Confirmed')}>Confirm Order</button>}
-                {canInvoice(viewSO) && <button className="btn btn-primary btn-sm" onClick={() => { setShowView(false); createInvoice(viewSO); }}>Create Invoice</button>}
-                {canEdit(viewSO) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(viewSO)}>Edit</button>}
-                {canCancel(viewSO) && <button className="btn btn-danger btn-sm" onClick={() => showConfirm(`Cancel ${viewSO.so_number}?`, () => updateStatus(viewSO, 'Cancelled'))}>Cancel</button>}
-                <button className="modal-close" onClick={() => setShowView(false)}>×</button>
-              </div>
-            </div>
-            <div className="modal-body">
-              {statusPipeline(viewSO.status)}
-              {flowBar(viewSO.so_number, linkedInvoice)}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                {[
-                  { label: 'Customer', value: viewSO.customer_name },
-                  { label: 'Status', value: viewSO.status },
-                  { label: 'Order Date', value: viewSO.date },
-                  { label: 'Valid Until', value: viewSO.expiry_date || '—' },
-                  { label: 'Subtotal', value: fmt(viewSO.subtotal) },
-                  { label: 'Total (inc. Tax)', value: fmt(viewSO.total) },
-                ].map(f => (
-                  <div key={f.label} style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, marginBottom: '4px' }}>{f.label}</div>
-                    <div style={{ fontWeight: 700 }}>{f.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {linkedInvoice && (
-                <div style={{ marginBottom: '16px', padding: '12px 16px', background: 'var(--green-bg)', borderRadius: '8px', border: '1px solid var(--green)' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#12b76a', marginBottom: '6px' }}>LINKED INVOICE</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{linkedInvoice.invoice_number}</span>
-                    <span className={`badge ${linkedInvoice.status === 'Paid' ? 'badge-green' : linkedInvoice.status === 'Partial' ? 'badge-yellow' : 'badge-red'}`}>{linkedInvoice.status}</span>
-                  </div>
-                </div>
-              )}
-
-              <table>
-                <thead>
-                  <tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Disc%</th><th>Tax%</th><th>Total</th></tr>
-                </thead>
-                <tbody>
-                  {viewLines.map((l, i) => (
-                    <tr key={i}>
-                      <td style={{ color: 'var(--text2)', textAlign: 'center' }}>{i + 1}</td>
-                      <td style={{ fontWeight: 500 }}>{l.product_name}</td>
-                      <td>{l.qty}</td>
-                      <td>{fmt(l.unit_price)}</td>
-                      <td style={{ color: 'var(--text2)' }}>{l.discount_pct}%</td>
-                      <td style={{ color: 'var(--text2)' }}>{l.tax_rate}%</td>
-                      <td style={{ fontWeight: 600 }}>{fmt(l.line_total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div style={{ textAlign: 'right', marginTop: '14px' }}>
-                <div style={{ color: 'var(--text2)', fontSize: '13px', marginBottom: '4px' }}>Subtotal: {fmt(viewSO.subtotal)}</div>
-                <div style={{ color: 'var(--text2)', fontSize: '13px', marginBottom: '4px' }}>Tax: {fmt(viewSO.tax_amount)}</div>
-                <div style={{ fontWeight: 700, fontSize: '16px' }}>Total: {fmt(viewSO.total)}</div>
-              </div>
-
-              {viewSO.notes && (
-                <div style={{ marginTop: '14px', padding: '10px 14px', background: 'var(--bg3)', borderRadius: '8px', fontSize: '13px', color: 'var(--text2)' }}>
-                  <strong>Notes:</strong> {viewSO.notes}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowView(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {dialog && (
         <div className="modal-overlay" onClick={() => setDialog(null)}>
           <div className="modal" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
@@ -707,9 +615,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
               <div className="modal-title">{dialog.onConfirm ? 'Confirm' : 'Notice'}</div>
               <button className="modal-close" onClick={() => setDialog(null)}>×</button>
             </div>
-            <div className="modal-body">
-              <p style={{ margin: 0, color: 'var(--text2)', lineHeight: 1.6 }}>{dialog.message}</p>
-            </div>
+            <div className="modal-body"><p style={{ margin: 0, color: 'var(--text2)', lineHeight: 1.6 }}>{dialog.message}</p></div>
             <div className="modal-footer">
               {dialog.onConfirm ? (
                 <>
