@@ -410,7 +410,7 @@ export default function App() {
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center',
                       justifyContent: 'space-between', background: 'none', border: 'none',
-                      cursor: 'pointer', padding: '10px 12px 4px', textAlign: 'left',
+                      cursor: 'pointer', padding: '16px 12px 6px', textAlign: 'left',
                     }}
                   >
                     <span style={{
