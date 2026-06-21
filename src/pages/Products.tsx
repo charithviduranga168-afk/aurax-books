@@ -157,7 +157,7 @@ export default function Products() {
     const isLowStock = p.type !== 'Service' && p.stock_qty <= p.reorder_level;
     const stockValue = (p.stock_qty || 0) * (p.cost_price || 0);
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Products" onClick={() => { setView('list'); setSelected(null); setShowForm(false); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

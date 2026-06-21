@@ -117,7 +117,7 @@ function CustomerDetail({
   const outstanding = totalInvoiced - totalPaid;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div>
       <BackBtn label="Back to Customers" onClick={onBack} />
 
       {/* Hero */}

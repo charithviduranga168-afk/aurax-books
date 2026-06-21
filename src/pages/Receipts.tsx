@@ -166,7 +166,7 @@ export default function Receipts() {
   // ── Detail view ──
   if (view === 'detail' && selected) {
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Receipts" onClick={() => { setView('list'); setSelected(null); }} />
 
         {/* Hero */}

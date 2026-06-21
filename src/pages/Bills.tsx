@@ -285,7 +285,7 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
     const bill = selected;
     const isOverdue = bill.status !== 'Paid' && new Date(bill.due_date) < new Date();
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Bills" onClick={() => { setView('list'); setSelected(null); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

@@ -213,7 +213,7 @@ export default function ECommerce() {
   // ── Order detail view ──
   if (view === 'detail' && selectedOrder) {
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Orders" onClick={() => { setView('list'); setSelectedOrder(null); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

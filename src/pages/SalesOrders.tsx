@@ -332,7 +332,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
     const lineSub = selectedLines.reduce((s, l) => s + (l.line_total || 0), 0);
     const lineTax = selectedLines.reduce((s, l) => s + (l.line_total || 0) * ((l.tax_rate || 0) / 100), 0);
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Sales Orders" onClick={() => { setView('list'); setSelected(null); }} />
 
         {/* Hero */}

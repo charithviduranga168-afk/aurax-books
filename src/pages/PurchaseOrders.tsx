@@ -408,7 +408,7 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
   if (view === 'detail' && selected) {
     const po = selected;
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Purchase Orders" onClick={() => { setView('list'); setSelected(null); setShowForm(false); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

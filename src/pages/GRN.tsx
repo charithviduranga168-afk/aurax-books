@@ -312,7 +312,7 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
     const grn = selected;
     const detailTotal = selectedLines.reduce((s, l) => s + (l.line_total || 0), 0);
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to GRNs" onClick={() => { setView('list'); setSelected(null); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

@@ -134,7 +134,7 @@ export default function Suppliers() {
   // ── Detail view ──
   if (view === 'detail' && selected) {
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Suppliers" onClick={() => { setView('list'); setSelected(null); }} />
 
         {/* Hero */}

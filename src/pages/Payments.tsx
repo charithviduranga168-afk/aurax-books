@@ -205,7 +205,7 @@ export default function Payments() {
     const pay = selected;
     const linkedBill = allBills.find(b => b.id === pay.bill_id);
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Payments" onClick={() => { setView('list'); setSelected(null); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>

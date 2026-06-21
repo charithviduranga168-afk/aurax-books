@@ -312,7 +312,7 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     const isOverdue = selected.due_date && new Date(selected.due_date) < new Date() && selected.status !== 'Paid';
     const overdueDays = isOverdue ? Math.floor((Date.now() - new Date(selected.due_date).getTime()) / 86400000) : 0;
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Invoices" onClick={() => { setView('list'); setSelected(null); }} />
 
         {/* Hero */}

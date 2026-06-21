@@ -108,7 +108,7 @@ export default function Categories() {
     const productTypes = [...new Set(linkedProducts.map(p => p.type))].length;
     const totalValue = linkedProducts.reduce((s, p) => s + (p.stock_qty || 0) * (p.sales_price || 0), 0);
     return (
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div>
         <BackBtn label="Back to Categories" onClick={() => { setView('list'); setSelected(null); setShowForm(false); }} />
 
         <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>
