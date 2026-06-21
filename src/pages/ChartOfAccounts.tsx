@@ -61,6 +61,38 @@ const DEFAULT_ACCOUNTS = [
   { code: '5800', name: 'Miscellaneous Expense',   type: 'Expense',   sub_type: 'Other Expense',       description: 'Other general expenses' },
 ]
 
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const colors = ['#7c3aed', '#0284c7', '#16a34a', '#ea580c', '#dc2626']
+  const color = colors[name.charCodeAt(0) % colors.length]
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: color,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontWeight: 700, fontSize: size * 0.38, flexShrink: 0,
+    }}>
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  )
+}
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: '6px', background: 'none',
+      border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '14px',
+      padding: '6px 0', marginBottom: '16px', fontWeight: 500,
+    }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M19 12H5M12 5l-7 7 7 7" />
+      </svg>
+      {label}
+    </button>
+  )
+}
+
+const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—'
+
 export default function ChartOfAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,6 +104,11 @@ export default function ChartOfAccounts() {
   const [form, setForm] = useState({
     code: '', name: '', type: 'Asset', sub_type: 'Cash & Bank', description: '', is_active: true
   })
+
+  const [view, setView] = useState<'list' | 'detail'>('list')
+  const [selected, setSelected] = useState<Account | null>(null)
+  const [journalLines, setJournalLines] = useState<any[]>([])
+  const [loadingLines, setLoadingLines] = useState(false)
 
   useEffect(() => { loadAccounts() }, [])
 
@@ -86,6 +123,19 @@ export default function ChartOfAccounts() {
       .order('code')
     setAccounts(data || [])
     setLoading(false)
+  }
+
+  async function openDetail(acc: Account) {
+    setSelected(acc)
+    setView('detail')
+    setLoadingLines(true)
+    const { data } = await supabase
+      .from('journal_entry_lines')
+      .select('*, journal_entries(entry_number, date, description, status)')
+      .eq('account_id', acc.id)
+      .order('created_at', { ascending: false })
+    setJournalLines(data || [])
+    setLoadingLines(false)
   }
 
   async function seedDefaultAccounts() {
@@ -163,6 +213,136 @@ export default function ChartOfAccounts() {
     return acc
   }, {} as Record<string, Account[]>)
 
+  // ── Detail view ──────────────────────────────────────────────────────────────
+  if (view === 'detail' && selected) {
+    const totalDebit = journalLines.reduce((s, l) => s + (l.debit || 0), 0)
+    const totalCredit = journalLines.reduce((s, l) => s + (l.credit || 0), 0)
+    const balance = totalDebit - totalCredit
+
+    return (
+      <div>
+        <BackBtn label="Chart of Accounts" onClick={() => { setView('list'); setSelected(null) }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ marginBottom: '16px', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <Avatar name={selected.name} size={52} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontFamily: 'monospace', fontSize: '18px', fontWeight: 700,
+                  color: TYPE_COLORS[selected.type],
+                  background: `${TYPE_COLORS[selected.type]}15`,
+                  padding: '2px 10px', borderRadius: '6px',
+                }}>
+                  {selected.code}
+                </span>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>{selected.name}</h2>
+                <span style={{
+                  fontSize: '12px', fontWeight: 600, padding: '2px 10px', borderRadius: '20px',
+                  background: `${TYPE_COLORS[selected.type]}20`,
+                  color: TYPE_COLORS[selected.type],
+                  border: `1px solid ${TYPE_COLORS[selected.type]}40`,
+                }}>
+                  {selected.type}
+                </span>
+                {selected.is_system && <span className="badge badge-blue">System</span>}
+                <span className={`badge ${selected.is_active ? 'badge-green' : 'badge-red'}`}>
+                  {selected.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ color: 'var(--text2)', fontSize: '14px', marginTop: '8px' }}>
+                {selected.sub_type}
+                {selected.description ? ` · ${selected.description}` : ''}
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary"
+              onClick={() => { setView('list'); openEdit(selected) }}
+            >
+              Edit
+            </button>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+          {[
+            { label: 'Total Debits', value: fmt(totalDebit), color: '#16a34a' },
+            { label: 'Total Credits', value: fmt(totalCredit), color: '#dc2626' },
+            { label: 'Net Balance', value: fmt(Math.abs(balance)), color: balance >= 0 ? '#16a34a' : '#dc2626' },
+            { label: 'Entries', value: String(journalLines.length), color: 'var(--brand)' },
+          ].map(kpi => (
+            <div key={kpi.label} className="card" style={{ textAlign: 'center', padding: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: kpi.color, marginTop: '6px' }}>
+                {kpi.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Journal entries */}
+        <div className="table-wrap">
+          <div className="table-toolbar">
+            <h3>Journal Entries</h3>
+          </div>
+          {loadingLines ? (
+            <div className="empty-state"><p>Loading entries...</p></div>
+          ) : journalLines.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📒</div>
+              <h3>No journal entries</h3>
+              <p>No transactions have been posted to this account yet</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Entry #</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th style={{ textAlign: 'right' }}>Debit</th>
+                  <th style={{ textAlign: 'right' }}>Credit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {journalLines.map((line, i) => (
+                  <tr key={line.id || i}>
+                    <td style={{ fontWeight: 700, color: 'var(--brand)' }}>
+                      {line.journal_entries?.entry_number || '—'}
+                    </td>
+                    <td style={{ color: 'var(--text2)' }}>
+                      {fmtDate(line.journal_entries?.date)}
+                    </td>
+                    <td>{line.description || line.journal_entries?.description || '—'}</td>
+                    <td style={{ textAlign: 'right', color: '#16a34a', fontWeight: line.debit > 0 ? 600 : 400 }}>
+                      {line.debit > 0 ? fmt(line.debit) : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', color: '#dc2626', fontWeight: line.credit > 0 ? 600 : 400 }}>
+                      {line.credit > 0 ? fmt(line.credit) : '—'}
+                    </td>
+                    <td>
+                      {line.journal_entries?.status && (
+                        <span className={`badge ${line.journal_entries.status === 'Posted' ? 'badge-green' : 'badge-blue'}`}>
+                          {line.journal_entries.status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── List view ─────────────────────────────────────────────────────────────────
   return (
     <div>
       <div className="page-header">
@@ -176,9 +356,12 @@ export default function ChartOfAccounts() {
               {seeding ? 'Setting up...' : '⚡ Load Default Accounts'}
             </button>
           )}
-          <button className="btn btn-primary" onClick={() => (showForm ? setShowForm(false) : openAdd())}>{showForm ? 'Close' : '+ New Account'}</button>
+          <button className="btn btn-primary" onClick={() => (showForm ? setShowForm(false) : openAdd())}>
+            {showForm ? 'Close' : '+ New Account'}
+          </button>
         </div>
       </div>
+
       {showForm && (
         <div className="inline-panel">
           <div className="inline-panel-header">
@@ -259,7 +442,7 @@ export default function ChartOfAccounts() {
                 flex: '1', minWidth: '120px', padding: '14px 16px', borderRadius: '10px',
                 background: filterType === type ? TYPE_COLORS[type] : 'var(--bg2)',
                 border: `2px solid ${filterType === type ? TYPE_COLORS[type] : 'var(--border)'}`,
-                cursor: 'pointer', transition: 'all 0.15s'
+                cursor: 'pointer', transition: 'all 0.15s',
               }}
             >
               <div style={{ fontSize: '22px', fontWeight: 700, color: filterType === type ? '#fff' : TYPE_COLORS[type] }}>{count}</div>
@@ -305,7 +488,7 @@ export default function ChartOfAccounts() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{
                 width: '10px', height: '10px', borderRadius: '50%',
-                background: TYPE_COLORS[type], display: 'inline-block'
+                background: TYPE_COLORS[type], display: 'inline-block',
               }} />
               <h3 style={{ margin: 0 }}>{type}s</h3>
               <span className="badge badge-blue">{items.length}</span>
@@ -324,12 +507,16 @@ export default function ChartOfAccounts() {
             </thead>
             <tbody>
               {items.map(acc => (
-                <tr key={acc.id} style={{ opacity: acc.is_active ? 1 : 0.5 }}>
+                <tr
+                  key={acc.id}
+                  style={{ opacity: acc.is_active ? 1 : 0.5, cursor: 'pointer' }}
+                  onClick={() => openDetail(acc)}
+                >
                   <td>
                     <span style={{
                       fontFamily: 'monospace', fontWeight: 700, fontSize: '13px',
                       color: TYPE_COLORS[acc.type], background: `${TYPE_COLORS[acc.type]}15`,
-                      padding: '2px 8px', borderRadius: '4px'
+                      padding: '2px 8px', borderRadius: '4px',
                     }}>{acc.code}</span>
                   </td>
                   <td>
@@ -342,12 +529,12 @@ export default function ChartOfAccounts() {
                     <span
                       className={`badge ${acc.is_active ? 'badge-green' : 'badge-red'}`}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => toggleActive(acc)}
+                      onClick={e => { e.stopPropagation(); toggleActive(acc) }}
                     >
                       {acc.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td>
+                  <td onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={() => openEdit(acc)}>Edit</button>
                       {!acc.is_system && (
@@ -361,8 +548,6 @@ export default function ChartOfAccounts() {
           </table>
         </div>
       ))}
-
-      {/* Modal */}
     </div>
   )
 }
