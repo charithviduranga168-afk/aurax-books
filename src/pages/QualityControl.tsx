@@ -205,6 +205,12 @@ export default function QualityControl() {
     });
   }
 
+  async function updateInspectionStatus(id: string, newStatus: string) {
+    await supabase.from('qc_inspections').update({ status: newStatus }).eq('id', id);
+    setSelected((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev);
+    loadAll();
+  }
+
   const filtered = inspections.filter(i => {
     const q = search.toLowerCase();
     const matchSearch = !q || i.product_name.toLowerCase().includes(q) || i.inspection_number.toLowerCase().includes(q) || i.supplier_name.toLowerCase().includes(q) || i.inspector.toLowerCase().includes(q);
@@ -354,6 +360,12 @@ export default function QualityControl() {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button className="btn btn-secondary" onClick={() => openEdit(selected)}>Edit</button>
+              {selected.status !== 'pending' && selected.status !== 'cancelled' && (
+                <button className="btn btn-secondary" onClick={() => showConfirm('Return this inspection to Pending?', () => updateInspectionStatus(selected.id, 'pending'))}>Return to Pending</button>
+              )}
+              {selected.status !== 'cancelled' && (
+                <button className="btn" style={{ background: 'var(--red-light)', color: 'var(--red)' }} onClick={() => showConfirm('Cancel this inspection?', () => updateInspectionStatus(selected.id, 'cancelled'))}>Cancel</button>
+              )}
               <button
                 className="btn"
                 style={{ background: 'var(--red-light)', color: 'var(--red)' }}

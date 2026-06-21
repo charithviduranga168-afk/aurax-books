@@ -192,6 +192,22 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
     );
   }
 
+  function returnGrnToDraft(grn: any) {
+    showConfirm(`Return ${grn.grn_number} to Draft? Note: stock quantities will NOT be reversed automatically.`, async () => {
+      await supabase.from('grn_headers').update({ status: 'Draft' }).eq('id', grn.id);
+      setSelected((prev: any) => prev?.id === grn.id ? { ...prev, status: 'Draft' } : prev);
+      loadAll();
+    });
+  }
+
+  function cancelGrn(grn: any) {
+    showConfirm(`Cancel ${grn.grn_number}? This cannot be undone.`, async () => {
+      await supabase.from('grn_headers').update({ status: 'Cancelled' }).eq('id', grn.id);
+      setSelected((prev: any) => prev?.id === grn.id ? { ...prev, status: 'Cancelled' } : prev);
+      loadAll();
+    });
+  }
+
   function exportPDF(grn: any, lineItems: GrnLine[]) {
     const doc = new jsPDF();
     const fmtN = (n: number) => (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
@@ -329,6 +345,12 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
                   <button className="btn btn-primary btn-sm" onClick={() => markReceived(grn)}>Mark as Received</button>
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(grn)}>Delete</button>
                 </>
+              )}
+              {(grn.status === 'Received' || grn.status === 'Partial') && (
+                <button className="btn btn-secondary btn-sm" onClick={() => returnGrnToDraft(grn)}>Return to Draft</button>
+              )}
+              {grn.status !== 'Cancelled' && (
+                <button className="btn btn-danger btn-sm" onClick={() => cancelGrn(grn)}>Cancel</button>
               )}
             </div>
           </div>

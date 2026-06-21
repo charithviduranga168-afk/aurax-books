@@ -73,6 +73,21 @@ Owner: Sahan Gunasekara (life.aurax@gmail.com)
 
 All 21 modules now have list→detail navigation. No pending steps remain.
 
+### Return to Draft / Cancel — ALL COMPLETE ✓
+
+Every transaction type now has status reversal buttons:
+
+| Module | Return to Draft | Cancel |
+|--------|----------------|--------|
+| SalesOrders | ✓ Confirmed → Draft (only when no invoice_id) | ✓ Draft/Confirmed → Cancelled |
+| Invoices | — (no Draft state; starts as Unpaid) | ✓ Unpaid/Partial/Overdue → Cancelled |
+| PurchaseOrders | ✓ Sent/Confirmed → Draft | ✓ Draft/Sent/Confirmed → Cancelled |
+| Bills | — (no Draft state; starts as Unpaid) | ✓ Unpaid/Partial → Cancelled |
+| GRN | ✓ Received/Partial → Draft (stock NOT reversed) | ✓ any non-Cancelled → Cancelled |
+| JournalEntries | ✓ Posted → Draft | ✓ Draft/Posted → Cancelled |
+| QualityControl | ✓ any → pending (reset to initial) | ✓ any non-cancelled → cancelled |
+| Manufacturing | ✓ Completed/Cancelled → Planned (list row button) | ✓ already existed |
+
 ### Other potential tasks:
 - Customer portal improvements
 - Reports/Analytics enhancements

@@ -224,6 +224,20 @@ export default function JournalEntries() {
     loadData();
   }
 
+  async function returnEntryToDraft(entry: any) {
+    if (!confirm(`Return ${entry.entry_number} to Draft? This will allow editing again.`)) return;
+    await supabase.from('journal_entries').update({ status: 'Draft' }).eq('id', entry.id);
+    if (view === 'detail' && selected?.id === entry.id) setSelected({ ...selected, status: 'Draft' });
+    loadData();
+  }
+
+  async function cancelEntry(entry: any) {
+    if (!confirm(`Cancel ${entry.entry_number}? This cannot be undone.`)) return;
+    await supabase.from('journal_entries').update({ status: 'Cancelled' }).eq('id', entry.id);
+    if (view === 'detail' && selected?.id === entry.id) setSelected({ ...selected, status: 'Cancelled' });
+    loadData();
+  }
+
   async function deleteEntry(entry: any) {
     if (entry.status !== 'Draft') return;
     if (!confirm(`Delete draft entry ${entry.entry_number}?`)) return;
@@ -431,6 +445,12 @@ export default function JournalEntries() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
           {e.status === 'Draft' && (
             <button className="btn btn-secondary" onClick={() => postEntry(e)}>Post Entry</button>
+          )}
+          {e.status === 'Posted' && (
+            <button className="btn btn-secondary" onClick={() => returnEntryToDraft(e)}>Return to Draft</button>
+          )}
+          {e.status !== 'Cancelled' && (
+            <button className="btn btn-danger" onClick={() => cancelEntry(e)}>Cancel</button>
           )}
           {e.status === 'Draft' && (
             <button className="btn btn-danger" onClick={() => deleteEntry(e)}>Delete</button>

@@ -884,7 +884,12 @@ export default function Manufacturing() {
                             </>
                           )}
                           {(o.status === 'Completed' || o.status === 'Cancelled') && (
-                            <span style={{ color: 'var(--text3)', fontSize: '12px' }}>—</span>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => updateOrderStatus(o, 'Planned')}
+                            >
+                              Return to Planned
+                            </button>
                           )}
                         </div>
                       </td>

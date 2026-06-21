@@ -203,6 +203,12 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     loadData();
   }
 
+  async function updateInvoiceStatus(id: string, newStatus: string) {
+    await supabase.from('invoices').update({ status: newStatus }).eq('id', id);
+    setSelected((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev);
+    loadData();
+  }
+
   async function deleteInvoice(id: string) {
     if (!confirm('Delete this invoice?')) return;
     await supabase.from('invoice_lines').delete().eq('invoice_id', id);
@@ -334,6 +340,9 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
               <button className="btn btn-primary btn-sm" onClick={() => handlePrint(selected)}>PDF</button>
               {companySettings.payhere_merchant_id && selected.status !== 'Paid' && (
                 <button className="btn btn-secondary btn-sm" onClick={() => generatePaymentLink(selected)} style={{ color: '#0070ba', borderColor: '#0070ba' }}>Pay Link</button>
+              )}
+              {selected.status !== 'Paid' && selected.status !== 'Cancelled' && (
+                <button className="btn btn-danger btn-sm" onClick={() => { if (confirm(`Cancel invoice ${selected.invoice_number}?`)) updateInvoiceStatus(selected.id, 'Cancelled'); }}>Cancel</button>
               )}
               <button className="btn btn-danger btn-sm" onClick={() => deleteInvoice(selected.id)}>Delete</button>
             </div>

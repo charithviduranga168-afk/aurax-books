@@ -403,6 +403,7 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
   const canReceive = (po: any) => po.status === 'Confirmed' || po.status === 'Partial';
   const canBill    = (po: any) => ['Confirmed', 'Partial', 'Received'].includes(po.status);
   const canCancel  = (po: any) => ['Draft', 'Sent', 'Confirmed'].includes(po.status);
+  const canReturnToDraft = (po: any) => po.status === 'Sent' || po.status === 'Confirmed';
 
   // ── Detail view ──
   if (view === 'detail' && selected) {
@@ -423,6 +424,7 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
               {canEdit(po) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(po)}>Edit</button>}
               {canSend(po) && <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(po, 'Sent')}>Send RFQ</button>}
               {canConfirm(po) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(po, 'Confirmed')}>Confirm PO</button>}
+              {canReturnToDraft(po) && <button className="btn btn-secondary btn-sm" onClick={() => showConfirm(`Return ${po.po_number} to Draft?`, () => updateStatus(po, 'Draft'))}>Return to Draft</button>}
               {canReceive(po) && <button className="btn btn-primary btn-sm" onClick={() => receiveProducts(po)}>Receive Products</button>}
               {canBill(po) && <button className="btn btn-secondary btn-sm" onClick={() => createBill(po)}>Create Bill</button>}
               {canDelete(po) && <button className="btn btn-danger btn-sm" onClick={() => handleDelete(po)}>Delete</button>}

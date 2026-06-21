@@ -275,6 +275,12 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
     doc.save(bill.bill_number + '.pdf');
   }
 
+  async function updateBillStatus(id: string, newStatus: string) {
+    await supabase.from('bills').update({ status: newStatus }).eq('id', id);
+    setSelected((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev);
+    loadData();
+  }
+
   const filtered = bills.filter(b => {
     const matchSearch = (b.bill_number || '').toLowerCase().includes(search.toLowerCase()) || (b.supplier_name || '').toLowerCase().includes(search.toLowerCase());
     return matchSearch && (!filterStatus || b.status === filterStatus);
@@ -302,6 +308,9 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
               <button className="btn btn-primary btn-sm" onClick={() => exportPDF(bill, selectedLines)}>PDF</button>
               {bill.status !== 'Paid' && (
                 <button className="btn btn-secondary btn-sm" onClick={async () => { onCreateGrn?.(bill, selectedLines); }}>Create GRN</button>
+              )}
+              {bill.status !== 'Paid' && bill.status !== 'Cancelled' && (
+                <button className="btn btn-danger btn-sm" onClick={() => { if (confirm(`Cancel bill ${bill.bill_number}?`)) updateBillStatus(bill.id, 'Cancelled'); }}>Cancel</button>
               )}
             </div>
           </div>

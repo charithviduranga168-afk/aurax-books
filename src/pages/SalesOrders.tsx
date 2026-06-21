@@ -303,6 +303,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
   const canConfirm = (so: any) => so.status === 'Draft';
   const canInvoice = (so: any) => so.status === 'Confirmed';
   const canCancel = (so: any) => ['Draft', 'Confirmed'].includes(so.status);
+  const canReturnToDraft = (so: any) => so.status === 'Confirmed' && !so.invoice_id;
 
   const tabFiltered = sos.filter(s => {
     if (activeTab === 'quotations') return s.status === 'Draft';
@@ -362,6 +363,7 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
               {canConfirm(selected) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(selected, 'Confirmed')}>Confirm</button>}
               {canInvoice(selected) && <button className="btn btn-primary btn-sm" onClick={() => createInvoice(selected)}>Create Invoice</button>}
               {canEdit(selected) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(selected)}>Edit</button>}
+              {canReturnToDraft(selected) && <button className="btn btn-secondary btn-sm" onClick={() => showConfirm(`Return ${selected.so_number} to Draft?`, () => updateStatus(selected, 'Draft'))}>Return to Draft</button>}
               {canCancel(selected) && <button className="btn btn-danger btn-sm" onClick={() => showConfirm(`Cancel ${selected.so_number}?`, () => updateStatus(selected, 'Cancelled'))}>Cancel</button>}
             </div>
           </div>
