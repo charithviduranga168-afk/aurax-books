@@ -385,7 +385,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'} ${moduleMode ? 'module-hidden' : ''}`}>
         {/* Brand */}
         <div className="sidebar-brand">
           <img src="/logo.png" alt="LedgerX" style={{ height: sidebarOpen ? 52 : 30, width: sidebarOpen ? 'auto' : 30, objectFit: 'contain', objectPosition: 'center top', flexShrink: 0, transition: 'height 0.35s' }} />
