@@ -11,10 +11,27 @@ interface Adjustment {
 
 const REASONS = ['Count Correction', 'Damage', 'Expiry', 'Theft / Loss', 'Return to Supplier', 'Sample / Tester', 'Transfer', 'Opening Stock', 'Other'];
 const TYPES = [
-  { value: 'Add',   label: 'Add Stock',    color: '#16a34a', bg: 'rgba(34,197,94,0.08)',  desc: 'Increase stock quantity' },
-  { value: 'Remove',label: 'Remove Stock', color: '#dc2626', bg: 'rgba(239,68,68,0.08)',  desc: 'Decrease stock quantity' },
-  { value: 'Count', label: 'Set Count',    color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', desc: 'Set stock to exact number' },
+  { value: 'Add',    label: 'Add Stock',    color: '#16a34a', bg: 'rgba(34,197,94,0.08)',  desc: 'Increase stock quantity' },
+  { value: 'Remove', label: 'Remove Stock', color: '#dc2626', bg: 'rgba(239,68,68,0.08)',  desc: 'Decrease stock quantity' },
+  { value: 'Count',  label: 'Set Count',    color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', desc: 'Set stock to exact number' },
 ];
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: '6px', background: 'none',
+      border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '14px',
+      padding: '6px 0', marginBottom: '16px', fontWeight: 500,
+    }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M19 12H5M12 5l-7 7 7 7" />
+      </svg>
+      {label}
+    </button>
+  )
+}
+
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
 export default function StockAdjustments() {
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
@@ -24,6 +41,9 @@ export default function StockAdjustments() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
+
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selected, setSelected] = useState<Adjustment | null>(null);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -71,29 +91,20 @@ export default function StockAdjustments() {
 
     const before = product.stock_qty || 0;
     let after: number;
-    if (form.adjustment_type === 'Add')    after = before + qty;
+    if (form.adjustment_type === 'Add') after = before + qty;
     else if (form.adjustment_type === 'Remove') after = Math.max(0, before - qty);
-    else after = qty; // Count
+    else after = qty;
 
     const ref = generateRef(adjustments);
-
     const { error } = await supabase.from('stock_adjustments').insert({
-      user_id: user.id,
-      reference: ref,
-      date: form.date,
-      product_id: form.product_id,
-      product_name: product.name,
-      adjustment_type: form.adjustment_type,
-      quantity: qty,
-      before_qty: before,
-      after_qty: after,
-      reason: form.reason,
-      notes: form.notes,
+      user_id: user.id, reference: ref, date: form.date,
+      product_id: form.product_id, product_name: product.name,
+      adjustment_type: form.adjustment_type, quantity: qty,
+      before_qty: before, after_qty: after,
+      reason: form.reason, notes: form.notes,
     });
 
     if (error) { showAlert('Failed to save: ' + error.message); setSaving(false); return; }
-
-    // Update product stock
     await supabase.from('products').update({ stock_qty: after }).eq('id', form.product_id);
 
     setSaving(false);
@@ -118,24 +129,112 @@ export default function StockAdjustments() {
   const todayAdj = adjustments.filter((a) => a.date === new Date().toISOString().split('T')[0]);
   const totalAdded   = adjustments.filter((a) => a.adjustment_type === 'Add').reduce((s, a) => s + a.quantity, 0);
   const totalRemoved = adjustments.filter((a) => a.adjustment_type === 'Remove').reduce((s, a) => s + a.quantity, 0);
-
   const sectionLabel = { fontSize: '13px', fontWeight: 700, color: 'var(--brand)', marginBottom: '16px', textTransform: 'uppercase' as const, letterSpacing: '0.5px' };
 
+  const DialogEl = () => dialog ? (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="card" style={{ width: 360, padding: '28px 24px' }}>
+        <p style={{ margin: '0 0 20px', fontSize: '14px' }}>{dialog.msg}</p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          {dialog.type === 'confirm' && <button className="btn btn-danger" onClick={() => { dialog.onOk?.(); setDialog(null); }}>Confirm</button>}
+          <button className="btn btn-secondary" onClick={() => setDialog(null)}>{dialog.type === 'alert' ? 'OK' : 'Cancel'}</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // ── Detail view ──────────────────────────────────────────────────────────────
+  if (view === 'detail' && selected) {
+    const t = TYPES.find(t => t.value === selected.adjustment_type) || TYPES[0];
+    const changeLabel = selected.adjustment_type === 'Add' ? `+${selected.quantity}`
+      : selected.adjustment_type === 'Remove' ? `−${selected.quantity}`
+      : `→${selected.quantity}`;
+    const changeSymbol = selected.adjustment_type === 'Add' ? '+' : selected.adjustment_type === 'Remove' ? '−' : '=';
+
+    return (
+      <div>
+        <DialogEl />
+        <BackBtn label="Stock Adjustments" onClick={() => { setView('list'); setSelected(null) }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ marginBottom: '16px', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '12px', background: t.bg, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 24, fontWeight: 800, color: t.color }}>{changeSymbol}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>{selected.reference}</h2>
+                <span style={{ padding: '2px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: t.bg, color: t.color }}>
+                  {t.label}
+                </span>
+              </div>
+              <div style={{ color: 'var(--text2)', fontSize: '14px', marginTop: '6px' }}>
+                {selected.product_name} · {fmtDate(selected.date)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+          {[
+            { label: 'Before', value: String(selected.before_qty), color: 'var(--text)' },
+            { label: 'Change', value: changeLabel, color: t.color },
+            { label: 'After', value: String(selected.after_qty), color: t.color },
+            { label: 'Reason', value: selected.reason, color: 'var(--brand)' },
+          ].map(kpi => (
+            <div key={kpi.label} className="card" style={{ textAlign: 'center', padding: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: kpi.color, marginTop: '6px' }}>{kpi.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Details card */}
+        <div className="card">
+          <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '16px' }}>Adjustment Details</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {[
+              { label: 'Reference', value: selected.reference },
+              { label: 'Date', value: fmtDate(selected.date) },
+              { label: 'Product', value: selected.product_name },
+              { label: 'Adjustment Type', value: selected.adjustment_type },
+              { label: 'Reason', value: selected.reason },
+              { label: 'Before Quantity', value: String(selected.before_qty) },
+              { label: 'Adjusted Quantity', value: String(selected.quantity) },
+              { label: 'After Quantity', value: String(selected.after_qty) },
+            ].map(row => (
+              <div key={row.label}>
+                <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  {row.label}
+                </div>
+                <div style={{ fontWeight: 500 }}>{row.value}</div>
+              </div>
+            ))}
+          </div>
+          {selected.notes && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Notes</div>
+              <div style={{ color: 'var(--text2)', fontSize: '14px' }}>{selected.notes}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── List view ─────────────────────────────────────────────────────────────────
   if (loading) return <div className="empty-state"><p>Loading...</p></div>;
 
   return (
     <div>
-      {dialog && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card" style={{ width: 360, padding: '28px 24px' }}>
-            <p style={{ margin: '0 0 20px', fontSize: '14px' }}>{dialog.msg}</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              {dialog.type === 'confirm' && <button className="btn btn-danger" onClick={() => { dialog.onOk?.(); setDialog(null); }}>Confirm</button>}
-              <button className="btn btn-secondary" onClick={() => setDialog(null)}>{dialog.type === 'alert' ? 'OK' : 'Cancel'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DialogEl />
 
       <div className="page-header">
         <div>
@@ -167,7 +266,6 @@ export default function StockAdjustments() {
         <div className="card" style={{ marginBottom: 24 }}>
           <div style={sectionLabel}>New Stock Adjustment</div>
 
-          {/* Type selector */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
             {TYPES.map((t) => (
               <button key={t.value} onClick={() => setForm({ ...form, adjustment_type: t.value })}
@@ -208,7 +306,6 @@ export default function StockAdjustments() {
             </div>
           </div>
 
-          {/* Preview */}
           {selectedProduct && qty > 0 && (
             <div style={{ margin: '16px 0', padding: '14px 18px', background: 'var(--bg2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ textAlign: 'center' }}>
@@ -270,7 +367,7 @@ export default function StockAdjustments() {
               {filtered.map((a) => {
                 const t = TYPES.find((t) => t.value === a.adjustment_type)!;
                 return (
-                  <tr key={a.id}>
+                  <tr key={a.id} style={{ cursor: 'pointer' }} onClick={() => { setSelected(a); setView('detail') }}>
                     <td style={{ fontWeight: 700, color: 'var(--brand)', fontSize: 13 }}>{a.reference}</td>
                     <td style={{ color: 'var(--text2)', fontSize: 13 }}>{a.date}</td>
                     <td style={{ fontWeight: 500 }}>{a.product_name}</td>
@@ -281,7 +378,7 @@ export default function StockAdjustments() {
                     </td>
                     <td style={{ textAlign: 'center', color: 'var(--text2)' }}>{a.before_qty}</td>
                     <td style={{ textAlign: 'center', fontWeight: 700, color: t?.color }}>
-                      {a.adjustment_type === 'Add' ? `+${a.quantity}` : a.adjustment_type === 'Remove' ? `-${a.quantity}` : `→${a.quantity}`}
+                      {a.adjustment_type === 'Add' ? `+${a.quantity}` : a.adjustment_type === 'Remove' ? `−${a.quantity}` : `→${a.quantity}`}
                     </td>
                     <td style={{ textAlign: 'center', fontWeight: 700 }}>{a.after_qty}</td>
                     <td style={{ fontSize: 12, color: 'var(--text2)' }}>{a.reason}</td>

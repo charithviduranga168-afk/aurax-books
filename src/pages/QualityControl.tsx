@@ -21,18 +21,8 @@ interface QCInspection {
   created_at: string;
 }
 
-interface GRNHeader {
-  id: string;
-  grn_number: string;
-  supplier_name: string;
-  created_at: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  sku: string;
-}
+interface GRNHeader { id: string; grn_number: string; supplier_name: string; created_at: string; }
+interface Product { id: string; name: string; sku: string; }
 
 const STATUSES = ['pending', 'passed', 'failed', 'partial', 'on_hold'];
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -42,11 +32,27 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   partial:  { bg: '#fef3c7', color: '#d97706' },
   on_hold:  { bg: '#e0e7ff', color: '#4f46e5' },
 };
-
 const FAILURE_REASONS = [
   'Damaged packaging', 'Wrong quantity', 'Wrong product', 'Quality below spec',
   'Expired / near expiry', 'Physical damage', 'Wrong specifications', 'Other',
 ];
+
+function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: '6px', background: 'none',
+      border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: '14px',
+      padding: '6px 0', marginBottom: '16px', fontWeight: 500,
+    }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M19 12H5M12 5l-7 7 7 7" />
+      </svg>
+      {label}
+    </button>
+  )
+}
+
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
 
 export default function QualityControl() {
   const [inspections, setInspections] = useState<QCInspection[]>([]);
@@ -60,6 +66,9 @@ export default function QualityControl() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [dialog, setDialog] = useState<{ type: 'alert' | 'confirm'; msg: string; onOk?: () => void } | null>(null);
+
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [selected, setSelected] = useState<QCInspection | null>(null);
 
   const blankForm = {
     grn_id: '', product_id: '', product_name: '', supplier_name: '',
@@ -159,36 +168,31 @@ export default function QualityControl() {
     let error;
     if (editId) {
       ({ error } = await supabase.from('qc_inspections').update(payload).eq('id', editId));
+      if (!error && selected?.id === editId) {
+        setSelected({ ...selected, ...payload, id: editId } as QCInspection);
+      }
     } else {
       const inspection_number = await getNextNumber();
       ({ error } = await supabase.from('qc_inspections').insert({ ...payload, inspection_number }));
     }
     setSaving(false);
     setShowForm(false);
-    if (error) {
-      console.error('QC save error:', error);
-      showAlert('Failed to save: ' + error.message);
-      return;
-    }
+    if (error) { showAlert('Failed to save: ' + error.message); return; }
     loadAll();
   }
 
   function openEdit(ins: QCInspection) {
     setEditId(ins.id);
     setForm({
-      grn_id: ins.grn_id || '',
-      product_id: ins.product_id || '',
-      product_name: ins.product_name,
-      supplier_name: ins.supplier_name,
+      grn_id: ins.grn_id || '', product_id: ins.product_id || '',
+      product_name: ins.product_name, supplier_name: ins.supplier_name,
       quantity_received: String(ins.quantity_received),
       quantity_passed: String(ins.quantity_passed),
       quantity_failed: String(ins.quantity_failed),
       quantity_on_hold: String(ins.quantity_on_hold),
       inspection_date: ins.inspection_date,
-      inspector: ins.inspector,
-      status: ins.status,
-      failure_reason: ins.failure_reason,
-      notes: ins.notes,
+      inspector: ins.inspector, status: ins.status,
+      failure_reason: ins.failure_reason, notes: ins.notes,
     });
     setShowForm(true);
   }
@@ -196,6 +200,7 @@ export default function QualityControl() {
   function deleteInspection(id: string) {
     showConfirm('Delete this inspection record?', async () => {
       await supabase.from('qc_inspections').delete().eq('id', id);
+      if (view === 'detail') setView('list');
       loadAll();
     });
   }
@@ -212,8 +217,246 @@ export default function QualityControl() {
   const totalReceived = inspections.reduce((s, i) => s + i.quantity_received, 0);
   const passRate = totalReceived > 0 ? ((totalPassed / totalReceived) * 100).toFixed(1) : '0.0';
 
+  const FormModal = () => !showForm ? null : (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="card" style={{ maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>{editId ? 'Edit Inspection' : 'New Inspection'}</h2>
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowForm(false)}>✕</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Link to GRN</label>
+            <select className="form-input" value={form.grn_id} onChange={e => onGRNChange(e.target.value)}>
+              <option value="">— Manual Entry —</option>
+              {grns.map(g => <option key={g.id} value={g.id}>{g.grn_number} — {g.supplier_name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Inspection Date *</label>
+            <input className="form-input" type="date" value={form.inspection_date} onChange={e => setForm((f: any) => ({ ...f, inspection_date: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Product *</label>
+            <select className="form-input" value={form.product_id} onChange={e => onProductChange(e.target.value)}>
+              <option value="">— Select Product —</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Product Name (override)</label>
+            <input className="form-input" value={form.product_name} onChange={e => setForm((f: any) => ({ ...f, product_name: e.target.value }))} placeholder="Or type product name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Supplier</label>
+            <input className="form-input" value={form.supplier_name} onChange={e => setForm((f: any) => ({ ...f, supplier_name: e.target.value }))} placeholder="Supplier name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Inspector</label>
+            <input className="form-input" value={form.inspector} onChange={e => setForm((f: any) => ({ ...f, inspector: e.target.value }))} placeholder="Inspector name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Quantity Received *</label>
+            <input className="form-input" type="number" min="0" value={form.quantity_received} onChange={e => onQtyReceivedChange(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Quantity Passed</label>
+            <input className="form-input" type="number" min="0" value={form.quantity_passed} onChange={e => setForm((f: any) => ({ ...f, quantity_passed: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Quantity Failed</label>
+            <input className="form-input" type="number" min="0" value={form.quantity_failed} onChange={e => setForm((f: any) => ({ ...f, quantity_failed: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Quantity On Hold</label>
+            <input className="form-input" type="number" min="0" value={form.quantity_on_hold} onChange={e => setForm((f: any) => ({ ...f, quantity_on_hold: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Status</label>
+            <select className="form-input" value={form.status} onChange={e => setForm((f: any) => ({ ...f, status: e.target.value }))}>
+              {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Failure Reason</label>
+            <select className="form-input" value={form.failure_reason} onChange={e => setForm((f: any) => ({ ...f, failure_reason: e.target.value }))}>
+              <option value="">— None —</option>
+              {FAILURE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="form-group" style={{ marginTop: 14 }}>
+          <label className="form-label">Notes</label>
+          <textarea className="form-input" rows={3} value={form.notes} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Additional inspection notes..." style={{ resize: 'vertical' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
+          <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving...' : editId ? 'Save Changes' : 'Create Inspection'}</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const DialogEl = () => !dialog ? null : (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="card" style={{ maxWidth: 380 }}>
+        <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
+          <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Detail view ──────────────────────────────────────────────────────────────
+  if (view === 'detail' && selected) {
+    const sc = STATUS_COLORS[selected.status] || STATUS_COLORS.pending;
+    const passRateSel = selected.quantity_received > 0
+      ? ((selected.quantity_passed / selected.quantity_received) * 100).toFixed(1) : '0.0';
+    const passRateNum = parseFloat(passRateSel);
+
+    return (
+      <div className="page-wrap">
+        <DialogEl />
+        <FormModal />
+        <BackBtn label="Quality Control" onClick={() => { setView('list'); setSelected(null) }} />
+
+        {/* Hero card */}
+        <div className="card" style={{ marginBottom: '16px', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: '12px', background: sc.bg, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={sc.color} strokeWidth="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>{selected.inspection_number}</h2>
+                <span style={{
+                  background: sc.bg, color: sc.color, borderRadius: 6,
+                  padding: '2px 12px', fontSize: 12, fontWeight: 700, textTransform: 'capitalize',
+                }}>
+                  {selected.status.replace('_', ' ')}
+                </span>
+              </div>
+              <div style={{ color: 'var(--text2)', fontSize: '14px', marginTop: '6px' }}>
+                {selected.product_name}
+                {selected.supplier_name ? ` · ${selected.supplier_name}` : ''}
+                {selected.inspector ? ` · Inspected by ${selected.inspector}` : ''}
+              </div>
+              <div style={{ color: 'var(--text2)', fontSize: '13px', marginTop: '4px' }}>
+                {fmtDate(selected.inspection_date)}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary" onClick={() => openEdit(selected)}>Edit</button>
+              <button
+                className="btn"
+                style={{ background: 'var(--red-light)', color: 'var(--red)' }}
+                onClick={() => deleteInspection(selected.id)}
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+          {[
+            { label: 'Received', value: String(selected.quantity_received), color: '#0284c7' },
+            { label: 'Passed', value: String(selected.quantity_passed), color: '#16a34a' },
+            { label: 'Failed', value: String(selected.quantity_failed), color: '#dc2626' },
+            { label: 'On Hold', value: String(selected.quantity_on_hold), color: '#4f46e5' },
+            {
+              label: 'Pass Rate',
+              value: passRateSel + '%',
+              color: passRateNum >= 90 ? '#16a34a' : passRateNum >= 70 ? '#d97706' : '#dc2626',
+            },
+          ].map(kpi => (
+            <div key={kpi.label} className="card" style={{ textAlign: 'center', padding: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: kpi.color, marginTop: '6px' }}>
+                {kpi.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pass/Fail bar */}
+        {selected.quantity_received > 0 && (
+          <div className="card" style={{ marginBottom: '16px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px' }}>Inspection Breakdown</div>
+            <div style={{ display: 'flex', height: 20, borderRadius: 10, overflow: 'hidden', gap: 2 }}>
+              {selected.quantity_passed > 0 && (
+                <div style={{ flex: selected.quantity_passed, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>
+                    {selected.quantity_passed > 0 ? selected.quantity_passed : ''}
+                  </span>
+                </div>
+              )}
+              {selected.quantity_failed > 0 && (
+                <div style={{ flex: selected.quantity_failed, background: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>{selected.quantity_failed}</span>
+                </div>
+              )}
+              {selected.quantity_on_hold > 0 && (
+                <div style={{ flex: selected.quantity_on_hold, background: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>{selected.quantity_on_hold}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12 }}>
+              <span style={{ color: '#16a34a', fontWeight: 600 }}>■ Passed: {selected.quantity_passed}</span>
+              <span style={{ color: '#dc2626', fontWeight: 600 }}>■ Failed: {selected.quantity_failed}</span>
+              <span style={{ color: '#4f46e5', fontWeight: 600 }}>■ On Hold: {selected.quantity_on_hold}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Details card */}
+        <div className="card">
+          <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '16px' }}>Inspection Details</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {[
+              { label: 'Inspection Number', value: selected.inspection_number },
+              { label: 'Date', value: fmtDate(selected.inspection_date) },
+              { label: 'Product', value: selected.product_name },
+              { label: 'Supplier', value: selected.supplier_name || '—' },
+              { label: 'Inspector', value: selected.inspector || '—' },
+              { label: 'Status', value: selected.status.replace('_', ' ') },
+              { label: 'Failure Reason', value: selected.failure_reason || '—' },
+              { label: 'Linked GRN', value: grns.find(g => g.id === selected.grn_id)?.grn_number || '—' },
+            ].map(row => (
+              <div key={row.label}>
+                <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  {row.label}
+                </div>
+                <div style={{ fontWeight: 500, textTransform: 'capitalize' }}>{row.value}</div>
+              </div>
+            ))}
+          </div>
+          {selected.notes && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Notes</div>
+              <div style={{ color: 'var(--text2)', fontSize: '14px' }}>{selected.notes}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── List view ─────────────────────────────────────────────────────────────────
   return (
     <div className="page-wrap">
+      <DialogEl />
+      <FormModal />
+
       <div className="page-header">
         <div>
           <h1 className="page-title">Quality Control</h1>
@@ -274,7 +517,7 @@ export default function QualityControl() {
                   {filtered.map(ins => {
                     const sc = STATUS_COLORS[ins.status] || STATUS_COLORS.pending;
                     return (
-                      <tr key={ins.id}>
+                      <tr key={ins.id} style={{ cursor: 'pointer' }} onClick={() => { setSelected(ins); setView('detail') }}>
                         <td style={{ fontWeight: 700, color: 'var(--brand)', fontSize: 13 }}>{ins.inspection_number}</td>
                         <td style={{ fontSize: 13, color: 'var(--text2)' }}>{ins.inspection_date}</td>
                         <td style={{ fontWeight: 600 }}>{ins.product_name}</td>
@@ -288,7 +531,7 @@ export default function QualityControl() {
                             {ins.status.replace('_', ' ')}
                           </span>
                         </td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button className="btn btn-secondary btn-sm" onClick={() => openEdit(ins)}>Edit</button>
                             <button className="btn btn-danger btn-sm" onClick={() => deleteInspection(ins.id)}>Del</button>
@@ -384,101 +627,6 @@ export default function QualityControl() {
               </table>
             );
           })()}
-        </div>
-      )}
-
-      {dialog && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card" style={{ maxWidth: 380 }}>
-            <p style={{ margin: '0 0 20px', lineHeight: 1.5 }}>{dialog.msg}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              {dialog.type === 'confirm' && <button className="btn btn-secondary" onClick={() => setDialog(null)}>Cancel</button>}
-              <button className="btn btn-primary" onClick={() => { dialog.onOk?.(); setDialog(null); }}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Form modal */}
-      {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card" style={{ maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>{editId ? 'Edit Inspection' : 'New Inspection'}</h2>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowForm(false)}>✕</button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div className="form-group">
-                <label className="form-label">Link to GRN</label>
-                <select className="form-input" value={form.grn_id} onChange={e => onGRNChange(e.target.value)}>
-                  <option value="">— Manual Entry —</option>
-                  {grns.map(g => <option key={g.id} value={g.id}>{g.grn_number} — {g.supplier_name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Inspection Date *</label>
-                <input className="form-input" type="date" value={form.inspection_date} onChange={e => setForm((f: any) => ({ ...f, inspection_date: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Product *</label>
-                <select className="form-input" value={form.product_id} onChange={e => onProductChange(e.target.value)}>
-                  <option value="">— Select Product —</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Product Name (override)</label>
-                <input className="form-input" value={form.product_name} onChange={e => setForm((f: any) => ({ ...f, product_name: e.target.value }))} placeholder="Or type product name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Supplier</label>
-                <input className="form-input" value={form.supplier_name} onChange={e => setForm((f: any) => ({ ...f, supplier_name: e.target.value }))} placeholder="Supplier name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Inspector</label>
-                <input className="form-input" value={form.inspector} onChange={e => setForm((f: any) => ({ ...f, inspector: e.target.value }))} placeholder="Inspector name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quantity Received *</label>
-                <input className="form-input" type="number" min="0" value={form.quantity_received} onChange={e => onQtyReceivedChange(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quantity Passed</label>
-                <input className="form-input" type="number" min="0" value={form.quantity_passed} onChange={e => setForm((f: any) => ({ ...f, quantity_passed: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quantity Failed</label>
-                <input className="form-input" type="number" min="0" value={form.quantity_failed} onChange={e => setForm((f: any) => ({ ...f, quantity_failed: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Quantity On Hold</label>
-                <input className="form-input" type="number" min="0" value={form.quantity_on_hold} onChange={e => setForm((f: any) => ({ ...f, quantity_on_hold: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select className="form-input" value={form.status} onChange={e => setForm((f: any) => ({ ...f, status: e.target.value }))}>
-                  {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Failure Reason</label>
-                <select className="form-input" value={form.failure_reason} onChange={e => setForm((f: any) => ({ ...f, failure_reason: e.target.value }))}>
-                  <option value="">— None —</option>
-                  {FAILURE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="form-group" style={{ marginTop: 14 }}>
-              <label className="form-label">Notes</label>
-              <textarea className="form-input" rows={3} value={form.notes} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Additional inspection notes..." style={{ resize: 'vertical' }} />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
-              <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving...' : editId ? 'Save Changes' : 'Create Inspection'}</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
