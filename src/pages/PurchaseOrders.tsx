@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Page } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
-import { Package, List } from 'lucide-react';
+import {
+  Package, List, FileText, CheckCircle, DollarSign,
+  Download, Filter, LayoutList, LayoutGrid, BarChart2,
+  ChevronLeft, ChevronRight, MoreVertical, X, Search,
+  Building2, Calendar,
+} from 'lucide-react';
 import { Chatter, logChatter } from '../components/Chatter';
 
 interface PoLine {
@@ -25,23 +31,41 @@ interface Props {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  Draft: 'badge-blue',
-  Sent: 'badge-yellow',
-  Confirmed: 'badge-purple',
-  Partial: 'badge-yellow',
-  Received: 'badge-green',
-  Cancelled: 'badge-red',
+  Draft: 'badge-blue', Sent: 'badge-yellow', Confirmed: 'badge-purple',
+  Partial: 'badge-yellow', Received: 'badge-green', Cancelled: 'badge-red',
 };
 
-const STATUS_STEPS = ['Draft', 'Sent', 'Confirmed', 'Received'];
+const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
+function Avatar({ name, size = 36 }: { name: string; size?: number }) {
+  const colors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0891b2'];
+  const bg = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  const initials = name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+  return <div style={{ width: size, height: size, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.38, fontWeight: 700, flexShrink: 0 }}>{initials}</div>;
+}
 
 function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}>
+    <button onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontWeight: 600, fontSize: 14, padding: '0 0 20px' }}
+      onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text2)')}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
       {label}
     </button>
   );
+}
+
+function statusBadge(status: string) {
+  return <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>{status}</span>;
+}
+
+function exportExcel(data: any[], filename: string) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }: Props) {
@@ -51,10 +75,21 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
   const [company, setCompany] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'rfq' | 'confirmed' | 'received'>('all');
+  const [activeFilter, setActiveFilter] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'analytics'>('list');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showGroupBy, setShowGroupBy] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [groupBy, setGroupBy] = useState('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const groupByRef = useRef<HTMLDivElement>(null);
+  const favRef = useRef<HTMLDivElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
-  // list→detail state
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<any>(null);
   const [selectedLines, setSelectedLines] = useState<PoLine[]>([]);
@@ -79,9 +114,20 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
   const showAlert = (msg: string) => setDialog({ message: msg });
   const showConfirm = (msg: string, fn: () => void) => setDialog({ message: msg, onConfirm: fn });
   const clampNonNeg = (v: string) => Math.max(0, parseFloat(v) || 0);
-  const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    try { setFavorites(JSON.parse(localStorage.getItem('lx_purchaseorders_favorites') || '[]')); } catch { setFavorites([]); }
+  }, []);
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) setShowFilters(false);
+      if (groupByRef.current && !groupByRef.current.contains(e.target as Node)) setShowGroupBy(false);
+      if (favRef.current && !favRef.current.contains(e.target as Node)) setShowFavorites(false);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   async function loadAll() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -328,10 +374,6 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
     doc.save(po.po_number + '.pdf');
   }
 
-  function statusBadge(status: string) {
-    return <span className={`badge ${STATUS_BADGE[status] || 'badge-blue'}`}>{status}</span>;
-  }
-
   function flowBar(poNumber: string, grn: any | null) {
     const grnDone = grn?.status === 'Received' || grn?.status === 'Partial';
     const chip = (label: string, tone: 'done' | 'active' | 'pending') => (
@@ -349,39 +391,74 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
     );
   }
 
-  const tabFiltered = pos.filter(p => {
-    if (activeTab === 'rfq') return p.status === 'Draft' || p.status === 'Sent';
-    if (activeTab === 'confirmed') return p.status === 'Confirmed' || p.status === 'Partial';
-    if (activeTab === 'received') return p.status === 'Received';
-    return true;
+  const canEdit = (po: any) => po.status === 'Draft';
+  const canDelete = (po: any) => po.status === 'Draft';
+  const canSend = (po: any) => po.status === 'Draft';
+  const canConfirm = (po: any) => po.status === 'Draft' || po.status === 'Sent';
+  const canReceive = (po: any) => po.status === 'Confirmed' || po.status === 'Partial';
+  const canBill = (po: any) => ['Confirmed', 'Partial', 'Received'].includes(po.status);
+  const canCancel = (po: any) => ['Draft', 'Sent', 'Confirmed'].includes(po.status);
+  const canReturnToDraft = (po: any) => po.status === 'Sent' || po.status === 'Confirmed';
+
+  const filtered = pos.filter(p => {
+    const matchSearch = (p.po_number || '').toLowerCase().includes(search.toLowerCase()) || (p.supplier_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchFilter = !activeFilter || p.status === activeFilter;
+    return matchSearch && matchFilter;
   });
 
-  const filtered = tabFiltered.filter(p => {
-    const matchSearch = (p.po_number || '').toLowerCase().includes(search.toLowerCase()) || (p.supplier_name || '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !filterStatus || p.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
   const rfqCount = pos.filter(p => p.status === 'Draft' || p.status === 'Sent').length;
   const confirmedCount = pos.filter(p => p.status === 'Confirmed' || p.status === 'Partial').length;
   const receivedCount = pos.filter(p => p.status === 'Received').length;
+  const totalSpend = pos.filter(p => p.status !== 'Cancelled').reduce((s, p) => s + (p.total || 0), 0);
 
-  const tabStyle = (active: boolean) => ({
-    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
-    background: active ? 'var(--brand)' : 'var(--bg2)',
-    color: active ? '#fff' : 'var(--text2)',
-    border: active ? 'none' : '1px solid var(--border)',
-    transition: 'all 0.15s',
-  });
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    const pageIds = paged.map(p => p.id);
+    const allSel = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+    const someSel = pageIds.some(id => selectedIds.has(id));
+    selectAllRef.current.checked = allSel;
+    selectAllRef.current.indeterminate = someSel && !allSel;
+  }, [selectedIds, paged]);
 
-  const canEdit    = (po: any) => po.status === 'Draft';
-  const canDelete  = (po: any) => po.status === 'Draft';
-  const canSend    = (po: any) => po.status === 'Draft';
-  const canConfirm = (po: any) => po.status === 'Draft' || po.status === 'Sent';
-  const canReceive = (po: any) => po.status === 'Confirmed' || po.status === 'Partial';
-  const canBill    = (po: any) => ['Confirmed', 'Partial', 'Received'].includes(po.status);
-  const canCancel  = (po: any) => ['Draft', 'Sent', 'Confirmed'].includes(po.status);
-  const canReturnToDraft = (po: any) => po.status === 'Sent' || po.status === 'Confirmed';
+  function toggleSelectAll() {
+    const pageIds = paged.map(p => p.id);
+    const allSel = pageIds.every(id => selectedIds.has(id));
+    const next = new Set(selectedIds);
+    if (allSel) pageIds.forEach(id => next.delete(id)); else pageIds.forEach(id => next.add(id));
+    setSelectedIds(next);
+  }
+
+  function toggleSelect(id: string) {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  }
+
+  function doExport() {
+    const rows = selectedIds.size > 0 ? pos.filter(p => selectedIds.has(p.id)) : filtered;
+    exportExcel(rows.map(p => ({ 'PO #': p.po_number, Date: p.date, Supplier: p.supplier_name, Expected: p.expected_date || '', Total: p.total, Status: p.status })), 'purchase_orders');
+  }
+
+  function saveFavorite(name: string) {
+    const next = [...favorites, name];
+    setFavorites(next);
+    localStorage.setItem('lx_purchaseorders_favorites', JSON.stringify(next));
+  }
+  function removeFavorite(name: string) {
+    const next = favorites.filter(f => f !== name);
+    setFavorites(next);
+    localStorage.setItem('lx_purchaseorders_favorites', JSON.stringify(next));
+  }
+
+  const kpiCards = [
+    { label: 'RFQ / Draft', value: rfqCount, sub: 'pending confirmation', color: '#2563eb', Icon: FileText, filter: 'Draft' },
+    { label: 'Confirmed', value: confirmedCount, sub: 'awaiting receipt', color: '#7c3aed', Icon: CheckCircle, filter: 'Confirmed' },
+    { label: 'Received', value: receivedCount, sub: 'goods received', color: '#059669', Icon: Package, filter: 'Received' },
+    { label: 'Total Spend', value: fmt(totalSpend), sub: 'non-cancelled', color: '#4338ca', Icon: DollarSign, filter: '' },
+  ];
 
   // ── Detail view ──
   if (view === 'detail' && selected) {
@@ -390,28 +467,42 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
       <div>
         <BackBtn label="Back to Purchase Orders" onClick={() => { setView('list'); setSelected(null); setShowForm(false); }} />
 
-        <div className="card" style={{ marginBottom: 16, padding: '24px 28px' }}>
+        <div className="card" style={{ marginBottom: 16, padding: '28px 32px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text1)', marginBottom: 8 }}>{po.po_number}</div>
-              <div style={{ marginBottom: 10 }}>{statusBadge(po.status)}</div>
-              <div style={{ fontSize: 13, color: 'var(--text2)' }}>{po.supplier_name} · {po.date}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text1)', letterSpacing: '-0.4px', marginBottom: 8 }}>{po.po_number}</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                {statusBadge(po.status)}
+                {po.supplier_name && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text2)', background: 'var(--bg)', padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)' }}><Building2 size={13} />{po.supplier_name}</span>}
+                {po.date && <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text2)', background: 'var(--bg)', padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)' }}><Calendar size={13} />{fmtDate(po.date)}</span>}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => exportPDF(po, selectedLines)}>PDF</button>
-              {canEdit(po) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(po)}>Edit</button>}
-              {canSend(po) && <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(po, 'Sent')}>Send RFQ</button>}
-              {canConfirm(po) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(po, 'Confirmed')}>Confirm PO</button>}
-              {canReturnToDraft(po) && <button className="btn btn-secondary btn-sm" onClick={() => showConfirm(`Return ${po.po_number} to Draft?`, () => updateStatus(po, 'Draft'))}>Return to Draft</button>}
-              {canReceive(po) && <button className="btn btn-primary btn-sm" onClick={() => receiveProducts(po)}>Receive Products</button>}
-              {canBill(po) && <button className="btn btn-secondary btn-sm" onClick={() => createBill(po)}>Create Bill</button>}
-              {canDelete(po) && <button className="btn btn-danger btn-sm" onClick={() => handleDelete(po)}>Delete</button>}
-              {canCancel(po) && <button className="btn btn-danger btn-sm" onClick={() => showConfirm(`Cancel ${po.po_number}?`, () => updateStatus(po, 'Cancelled'))}>Cancel</button>}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => exportPDF(po, selectedLines)}>PDF</button>
+                {canEdit(po) && <button className="btn btn-secondary btn-sm" onClick={() => openEdit(po)}>Edit</button>}
+                {canSend(po) && <button className="btn btn-secondary btn-sm" onClick={() => updateStatus(po, 'Sent')}>Send RFQ</button>}
+                {canConfirm(po) && <button className="btn btn-primary btn-sm" onClick={() => updateStatus(po, 'Confirmed')}>Confirm PO</button>}
+                {canReturnToDraft(po) && <button className="btn btn-secondary btn-sm" onClick={() => showConfirm(`Return ${po.po_number} to Draft?`, () => updateStatus(po, 'Draft'))}>Return to Draft</button>}
+                {canReceive(po) && <button className="btn btn-primary btn-sm" onClick={() => receiveProducts(po)}>Receive Products</button>}
+                {canBill(po) && <button className="btn btn-secondary btn-sm" onClick={() => createBill(po)}>Create Bill</button>}
+                {canDelete(po) && <button className="btn btn-danger btn-sm" onClick={() => handleDelete(po)}>Delete</button>}
+                {canCancel(po) && <button className="btn btn-danger btn-sm" onClick={() => showConfirm(`Cancel ${po.po_number}?`, () => updateStatus(po, 'Cancelled'))}>Cancel</button>}
+              </div>
+              <div style={{ display: 'flex', gap: 24 }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Subtotal</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#7c3aed' }}>{fmt(po.subtotal)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Total</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669' }}>{fmt(po.total)}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Smart buttons */}
         <SmartButtons>
           <SmartButton icon={<Package size={18} />} value={linkedGrns.length} label="Receipts (GRN)" />
           <SmartButton icon={<List size={18} />} value={selectedLines.length} label="Line Items" />
@@ -420,22 +511,20 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
         <StatusBar steps={['Draft', 'Sent', 'Confirmed', 'Partial', 'Received']} current={po.status} />
         {flowBar(po.po_number, linkedGrns[0] || null)}
 
-        <div className="kpi-grid" style={{ marginBottom: 20 }}>
-          <div className="kpi-card" style={{ '--kpi-color': '#7c3aed' } as any}>
-            <div className="kpi-label">Subtotal</div>
-            <div className="kpi-value" style={{ fontSize: 16 }}>{fmt(po.subtotal)}</div>
-          </div>
-          <div className="kpi-card" style={{ '--kpi-color': '#d97706' } as any}>
-            <div className="kpi-label">Tax</div>
-            <div className="kpi-value" style={{ fontSize: 16 }}>{fmt(po.tax_amount)}</div>
-          </div>
-          <div className="kpi-card" style={{ '--kpi-color': '#16a34a' } as any}>
-            <div className="kpi-label">Total</div>
-            <div className="kpi-value" style={{ fontSize: 16 }}>{fmt(po.total)}</div>
-          </div>
-          <div className="kpi-card" style={{ '--kpi-color': '#2e90fa' } as any}>
-            <div className="kpi-label">Expected Date</div>
-            <div className="kpi-value" style={{ fontSize: 16 }}>{po.expected_date || '—'}</div>
+        <div className="card" style={{ marginBottom: 16, padding: '20px 28px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>FINANCIAL OVERVIEW</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+            {[
+              { label: 'Subtotal', value: fmt(po.subtotal), color: '#7c3aed' },
+              { label: 'Tax', value: fmt(po.tax_amount), color: '#d97706' },
+              { label: 'Total', value: fmt(po.total), color: '#059669' },
+              { label: 'Expected Date', value: po.expected_date ? fmtDate(po.expected_date) : '—', color: '#2563eb' },
+            ].map((k, i) => (
+              <div key={k.label} style={{ paddingTop: 20, paddingBottom: 4, paddingLeft: i === 0 ? 0 : 28, paddingRight: 28, borderLeft: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{k.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: k.color, letterSpacing: '-0.5px' }}>{k.value}</div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -452,13 +541,14 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
           </div>
         )}
 
-        <div className="table-wrap">
-          <div className="table-toolbar"><h3>Line Items</h3></div>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>Line Items</div>
           <table>
-            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Tax %</th><th>Total</th></tr></thead>
+            <thead><tr><th><input type="checkbox" /></th><th>#</th><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Tax %</th><th>Total</th></tr></thead>
             <tbody>
               {selectedLines.map((l, i) => (
                 <tr key={i}>
+                  <td><input type="checkbox" /></td>
                   <td style={{ color: 'var(--text2)', textAlign: 'center' }}>{i + 1}</td>
                   <td style={{ fontWeight: 500 }}>{l.product_name}</td>
                   <td>{l.qty}</td>
@@ -473,6 +563,13 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
             <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 4 }}>Subtotal: {fmt(po.subtotal)}</div>
             <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 4 }}>Tax: {fmt(po.tax_amount)}</div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Total: {fmt(po.total)}</div>
+          </div>
+          <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: 'var(--text3)' }}>
+            <span>{selectedLines.length} items</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+              <button style={{ border: 'none', background: 'none', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+            </div>
           </div>
         </div>
 
@@ -508,42 +605,41 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
     <div>
       <div className="page-header">
         <div>
-          <div className="page-title">Purchase Orders</div>
+          <div className="page-title" style={{ fontSize: 26, fontWeight: 800 }}>Purchase Orders</div>
           <div className="page-sub">RFQ → Confirm → Receive → Bill · {pos.length} total POs</div>
         </div>
-        {!showForm && (
-          <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>+ New PO</button>
-        )}
+        <button className="btn btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>New</button>
       </div>
 
-      <div className="kpi-grid">
-        <div className="kpi-card" style={{ '--kpi-color': '#2e90fa' } as any} onClick={() => setActiveTab('rfq')}>
-          <div className="kpi-label">RFQ / Draft</div>
-          <div className="kpi-value">{rfqCount}</div>
-        </div>
-        <div className="kpi-card" style={{ '--kpi-color': '#7a5af8' } as any} onClick={() => setActiveTab('confirmed')}>
-          <div className="kpi-label">Confirmed</div>
-          <div className="kpi-value">{confirmedCount}</div>
-        </div>
-        <div className="kpi-card" style={{ '--kpi-color': '#12b76a' } as any} onClick={() => setActiveTab('received')}>
-          <div className="kpi-label">Received</div>
-          <div className="kpi-value">{receivedCount}</div>
-        </div>
-        <div className="kpi-card" style={{ '--kpi-color': '#4f35c8' } as any} onClick={() => setActiveTab('all')}>
-          <div className="kpi-label">Total Spend</div>
-          <div className="kpi-value">{fmt(pos.filter(p => p.status !== 'Cancelled').reduce((s, p) => s + (p.total || 0), 0))}</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        {kpiCards.map(k => (
+          <div key={k.label} className="card" style={{ padding: '20px 24px', cursor: 'pointer', background: activeFilter === k.filter && k.filter ? 'var(--brand-light)' : '' }} onClick={() => setActiveFilter(activeFilter === k.filter ? '' : k.filter)}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{k.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: k.color, letterSpacing: '-1px', marginBottom: 4 }}>{k.value}</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)' }}>{k.sub}</div>
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <k.Icon size={22} color="var(--brand)" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-        <button style={tabStyle(activeTab === 'all')} onClick={() => setActiveTab('all')}>All ({pos.length})</button>
-        <button style={tabStyle(activeTab === 'rfq')} onClick={() => setActiveTab('rfq')}>RFQ ({rfqCount})</button>
-        <button style={tabStyle(activeTab === 'confirmed')} onClick={() => setActiveTab('confirmed')}>Confirmed ({confirmedCount})</button>
-        <button style={tabStyle(activeTab === 'received')} onClick={() => setActiveTab('received')}>Received ({receivedCount})</button>
-      </div>
+      {activeFilter && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span style={{ padding: '4px 12px', borderRadius: 20, background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {activeFilter}
+            <button onClick={() => setActiveFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', padding: 0, display: 'flex' }}><X size={12} /></button>
+          </span>
+          <button onClick={() => setActiveFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12 }}>Clear all</button>
+        </div>
+      )}
 
       {showForm && (
-        <div className="inline-panel">
+        <div className="inline-panel" style={{ marginBottom: 20 }}>
           <div className="inline-panel-header">
             <div>
               <div className="inline-panel-title">{editingPO ? `Edit ${editingPO.po_number}` : 'New Purchase Order'}</div>
@@ -616,25 +712,86 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
         </div>
       )}
 
-      <div className="table-wrap">
-        <div className="table-toolbar">
-          <h3>Purchase Orders</h3>
-          <div className="table-actions">
-            <div className="search-wrap">
-              <svg className="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              <input placeholder="Search PO or supplier..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="btn btn-primary btn-sm" onClick={() => { resetForm(); setShowForm(true); }}>New</button>
+            <button onClick={doExport} style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', position: 'relative' }}>
+              <Download size={15} />
+              <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--brand)', color: '#fff', borderRadius: 10, fontSize: 9, padding: '1px 4px', fontWeight: 700 }}>
+                {selectedIds.size > 0 ? selectedIds.size : filtered.length}
+              </span>
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={13} style={{ position: 'absolute', left: 9, color: 'var(--text3)' }} />
+              <input placeholder="Search PO or supplier..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} style={{ paddingLeft: 30, height: 32, border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff', width: 200 }} />
             </div>
-            {activeTab === 'all' && (
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                <option value="">All Statuses</option>
-                <option value="Draft">Draft</option>
-                <option value="Sent">Sent (RFQ)</option>
-                <option value="Confirmed">Confirmed</option>
-                <option value="Partial">Partial</option>
-                <option value="Received">Received</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            )}
+
+            <div style={{ position: 'relative' }} ref={filtersRef}>
+              <button onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', alignItems: 'center', gap: 5, height: 32, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                <Filter size={13} />Filters{activeFilter && <span style={{ background: 'var(--brand)', color: '#fff', borderRadius: 10, fontSize: 10, padding: '0 5px', marginLeft: 2 }}>1</span>}
+              </button>
+              {showFilters && (
+                <div style={{ position: 'absolute', top: 36, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, padding: 12, minWidth: 160 }}>
+                  {['', 'Draft', 'Sent', 'Confirmed', 'Received', 'Cancelled'].map(f => (
+                    <label key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: 13 }}>
+                      <input type="radio" checked={activeFilter === f} onChange={() => { setActiveFilter(f); setPage(1); setShowFilters(false); }} />
+                      {f || 'All'}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: 'relative' }} ref={groupByRef}>
+              <button onClick={() => setShowGroupBy(!showGroupBy)} style={{ display: 'flex', alignItems: 'center', gap: 5, height: 32, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                Group By{groupBy && <span style={{ background: 'var(--brand)', color: '#fff', borderRadius: 10, fontSize: 10, padding: '0 5px', marginLeft: 2 }}>1</span>}
+              </button>
+              {showGroupBy && (
+                <div style={{ position: 'absolute', top: 36, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, padding: 12, minWidth: 160 }}>
+                  {[{ label: 'None', value: '' }, { label: 'Supplier', value: 'supplier' }, { label: 'Status', value: 'status' }].map(g => (
+                    <label key={g.value} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: 13 }}>
+                      <input type="radio" checked={groupBy === g.value} onChange={() => { setGroupBy(g.value); setShowGroupBy(false); }} />
+                      {g.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: 'relative' }} ref={favRef}>
+              <button onClick={() => setShowFavorites(!showFavorites)} style={{ display: 'flex', alignItems: 'center', gap: 5, height: 32, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                Favorites
+              </button>
+              {showFavorites && (
+                <div style={{ position: 'absolute', top: 36, right: 0, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 100, padding: 12, minWidth: 200 }}>
+                  {favorites.length === 0 && <div style={{ fontSize: 12, color: 'var(--text3)', padding: '4px 8px' }}>No saved favorites</div>}
+                  {favorites.map(f => (
+                    <div key={f} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', fontSize: 13 }}>
+                      <span style={{ cursor: 'pointer', color: 'var(--brand)' }} onClick={() => { setSearch(f); setShowFavorites(false); }}>{f}</span>
+                      <button onClick={() => removeFavorite(f)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)' }}><X size={12} /></button>
+                    </div>
+                  ))}
+                  {search && <button onClick={() => saveFavorite(search)} style={{ width: '100%', marginTop: 8, padding: '6px 8px', background: 'var(--brand-light)', color: 'var(--brand)', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Save "{search}"</button>}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text2)' }}>
+              <span>{filtered.length === 0 ? '0' : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)}`} / {filtered.length}</span>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', opacity: page === 1 ? 0.4 : 1 }}><ChevronLeft size={14} /></button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px', opacity: page >= totalPages ? 0.4 : 1 }}><ChevronRight size={14} /></button>
+            </div>
+
+            <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              {([{ mode: 'list', Icon: LayoutList }, { mode: 'kanban', Icon: LayoutGrid }, { mode: 'analytics', Icon: BarChart2 }] as const).map(({ mode, Icon }) => (
+                <button key={mode} onClick={() => setViewMode(mode as 'list' | 'kanban' | 'analytics')} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: viewMode === mode ? 'var(--brand-light)' : '#fff', cursor: 'pointer', color: viewMode === mode ? 'var(--brand)' : 'var(--text3)' }}>
+                  <Icon size={14} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -642,32 +799,82 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
           <div className="empty-state"><p>Loading...</p></div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <h3>{activeTab === 'all' ? 'No purchase orders yet' : 'None in this category'}</h3>
-            <p>{activeTab === 'all' ? 'Create your first PO to start the Procure-to-Pay cycle' : 'Switch to All to see all purchase orders'}</p>
-            {activeTab === 'all' && <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => { resetForm(); setShowForm(true); }}>+ New Purchase Order</button>}
+            <h3>No purchase orders yet</h3>
+            <p>Create your first PO to start the Procure-to-Pay cycle</p>
+            <button className="btn btn-primary" style={{ marginTop: '16px' }} onClick={() => { resetForm(); setShowForm(true); }}>+ New Purchase Order</button>
+          </div>
+        ) : viewMode === 'analytics' ? (
+          <div style={{ padding: 24 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 12, textTransform: 'uppercase' }}>Spend by Supplier</div>
+            {(() => {
+              const bySupplier: Record<string, number> = {};
+              filtered.forEach(p => { if (p.status !== 'Cancelled') bySupplier[p.supplier_name] = (bySupplier[p.supplier_name] || 0) + (p.total || 0); });
+              const max = Math.max(...Object.values(bySupplier), 1);
+              return Object.entries(bySupplier).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, val]) => (
+                <div key={name} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{name}</span>
+                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>{fmt(val)}</span>
+                  </div>
+                  <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#7c3aed', borderRadius: 4, width: `${Math.min(100, (val / max) * 100)}%` }} />
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        ) : viewMode === 'kanban' ? (
+          <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px,1fr))', gap: 12 }}>
+            {paged.map(po => (
+              <div key={po.id} className="card" style={{ padding: '16px 20px', cursor: 'pointer', border: selectedIds.has(po.id) ? '2px solid var(--brand)' : '1px solid var(--border)' }} onClick={() => openDetail(po)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <Avatar name={po.supplier_name || 'PO'} size={40} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{po.po_number}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>{po.supplier_name}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span>{statusBadge(po.status)}</span>
+                  <span style={{ fontWeight: 700, color: '#7c3aed' }}>{fmt(po.total)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <table>
             <thead>
-              <tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Expected</th><th>Total</th><th>Status</th><th></th></tr>
+              <tr>
+                <th style={{ width: 40 }}><input type="checkbox" ref={selectAllRef} onChange={toggleSelectAll} /></th>
+                <th>PO #</th><th>Date</th><th>Supplier</th><th>Expected</th><th>Total</th><th>Status</th><th style={{ width: 40 }}></th>
+              </tr>
             </thead>
             <tbody>
-              {filtered.map(po => (
-                <tr key={po.id} onClick={() => openDetail(po)} style={{ cursor: 'pointer' }}>
-                  <td style={{ fontWeight: 700, color: 'var(--brand)' }}>{po.po_number}</td>
-                  <td style={{ color: 'var(--text2)' }}>{po.date}</td>
-                  <td style={{ fontWeight: 500 }}>{po.supplier_name}</td>
-                  <td style={{ color: 'var(--text2)' }}>{po.expected_date || '—'}</td>
-                  <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(po.total)}</td>
-                  <td>{statusBadge(po.status)}</td>
-                  <td style={{ width: 32, textAlign: 'right' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text3)' }}><polyline points="9 18 15 12 9 6" /></svg>
-                  </td>
-                </tr>
-              ))}
+              {groupBy ? (() => {
+                const groups: Record<string, any[]> = {};
+                paged.forEach(p => {
+                  const k = groupBy === 'supplier' ? (p.supplier_name || 'Unknown') : groupBy === 'status' ? p.status : '';
+                  if (!groups[k]) groups[k] = [];
+                  groups[k].push(p);
+                });
+                return Object.entries(groups).flatMap(([group, rows]) => [
+                  <tr key={`g-${group}`} style={{ background: 'var(--bg)', cursor: 'default' }}>
+                    <td colSpan={8} style={{ fontWeight: 700, fontSize: 12, color: 'var(--text3)', padding: '8px 16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{group} ({rows.length})</td>
+                  </tr>,
+                  ...rows.map(po => <PORow key={po.id} po={po} selectedIds={selectedIds} toggleSelect={toggleSelect} openDetail={openDetail} openEdit={openEdit} handleDelete={handleDelete} fmt={fmt} fmtDate={fmtDate} />),
+                ]);
+              })() : paged.map(po => <PORow key={po.id} po={po} selectedIds={selectedIds} toggleSelect={toggleSelect} openDetail={openDetail} openEdit={openEdit} handleDelete={handleDelete} fmt={fmt} fmtDate={fmtDate} />)}
             </tbody>
           </table>
         )}
+
+        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: 'var(--text3)' }}>
+          <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : `Showing ${filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length}`}</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: page === 1 ? 0.4 : 1 }}><ChevronLeft size={14} /></button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{ border: 'none', background: 'none', cursor: 'pointer', opacity: page >= totalPages ? 0.4 : 1 }}><ChevronRight size={14} /></button>
+          </div>
+        </div>
       </div>
 
       {dialog && (
@@ -686,5 +893,43 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
         </div>
       )}
     </div>
+  );
+}
+
+function PORow({ po, selectedIds, toggleSelect, openDetail, openEdit, handleDelete, fmt, fmtDate }: {
+  po: any; selectedIds: Set<string>;
+  toggleSelect: (id: string) => void;
+  openDetail: (po: any) => void;
+  openEdit: (po: any) => void;
+  handleDelete: (po: any) => void;
+  fmt: (n: number) => string;
+  fmtDate: (d: string) => string;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const STATUS_BADGE2: Record<string, string> = { Draft: 'badge-blue', Sent: 'badge-yellow', Confirmed: 'badge-purple', Partial: 'badge-yellow', Received: 'badge-green', Cancelled: 'badge-red' };
+  return (
+    <tr onClick={() => openDetail(po)} style={{ cursor: 'pointer', background: selectedIds.has(po.id) ? 'var(--brand-light)' : '' }}>
+      <td onClick={e => { e.stopPropagation(); toggleSelect(po.id); }}><input type="checkbox" checked={selectedIds.has(po.id)} onChange={() => toggleSelect(po.id)} /></td>
+      <td style={{ fontWeight: 700, color: 'var(--brand)' }}>{po.po_number}</td>
+      <td style={{ color: 'var(--text2)' }}>{fmtDate(po.date)}</td>
+      <td style={{ fontWeight: 500 }}>{po.supplier_name}</td>
+      <td style={{ color: 'var(--text2)' }}>{po.expected_date ? fmtDate(po.expected_date) : '—'}</td>
+      <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{fmt(po.total)}</td>
+      <td><span className={`badge ${STATUS_BADGE2[po.status] || 'badge-blue'}`}>{po.status}</span></td>
+      <td onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6 }}>
+            <MoreVertical size={15} color="var(--text3)" />
+          </button>
+          {menuOpen && (
+            <div style={{ position: 'absolute', right: 0, top: 28, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 120 }}>
+              {po.status === 'Draft' && <button onClick={() => { openEdit(po); setMenuOpen(false); }} style={{ display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>Edit</button>}
+              {po.status === 'Draft' && <button onClick={() => { handleDelete(po); setMenuOpen(false); }} style={{ display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: '#dc2626' }}>Delete</button>}
+              <button onClick={() => { openDetail(po); setMenuOpen(false); }} style={{ display: 'block', width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13 }}>View</button>
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }

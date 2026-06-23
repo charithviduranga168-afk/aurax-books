@@ -135,15 +135,14 @@ function statusBadge(s: string) { /* colored pill by status string */ }
 | SalesOrders | ✓ | ✓ |
 | Invoices | ✓ | ✓ |
 | Receipts | ✓ | ✓ |
-| Suppliers | Pending | Pending |
-| PurchaseOrders | Pending | Pending |
-| Bills | Pending | Pending |
-| Payments | Pending | Pending |
-| GRN | Pending | Pending |
+| Suppliers | ✓ | ✓ |
+| PurchaseOrders | ✓ | ✓ |
+| Bills | ✓ | ✓ |
+| Payments | ✓ | ✓ |
+| GRN | ✓ | ✓ |
 | All other modules | Pending | Pending |
 
 ### Other potential tasks:
-- Apply redesign to Purchasing module (Suppliers, PurchaseOrders, Bills, Payments, GRN)
 - Apply redesign to remaining modules (Products, Inventory, HR, etc.)
 - Customer portal improvements
 - Reports/Analytics enhancements
