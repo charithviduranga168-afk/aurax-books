@@ -270,7 +270,7 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     const company = companySettings;
     doc.setFillColor(245, 246, 250); doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(79, 53, 200); doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-    doc.text(company.company_name || 'LedgerX', 14, 16);
+    doc.text(company.company_name || 'NeoGrid', 14, 16);
     doc.setFontSize(12); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
     doc.text('TAX INVOICE', 14, 26);
     doc.setTextColor(30, 30, 30); doc.setFontSize(16); doc.setFont('helvetica', 'bold');

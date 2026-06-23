@@ -321,7 +321,7 @@ export default function Settings() {
                   lineHeight: 1.6,
                 }}
               >
-                This determines how LedgerX values your stock and computes each
+                This determines how NeoGrid values your stock and computes each
                 product's Cost Price. It feeds directly into BOM costs, production
                 order costs, and the Cost Price shown on every product. Today, costs
                 are computed using a running Weighted Average (the basis for AVG, and
@@ -444,7 +444,7 @@ export default function Settings() {
                   marginTop: '2px',
                 }}
               >
-                Sign out of LedgerX
+                Sign out of NeoGrid
               </div>
             </div>
             <button

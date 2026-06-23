@@ -250,7 +250,7 @@ export default function Login() {
               <div style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, background: '#fff', borderRadius: 18, boxShadow: '0 30px 70px rgba(70,55,140,.2)', overflow: 'hidden', display: 'flex', animation: 'lx-fadeUp 1s ease both .25s' }}>
                 {/* Sidebar rail */}
                 <div style={{ width: 192, flexShrink: 0, background: '#faf9fe', borderRight: '1px solid #f0eff7', padding: '14px 12px', overflowY: 'auto' }}>
-                  <img src="/logo.png" alt="LedgerX" style={{ height: 30, width: 'auto', display: 'block', margin: '2px 0 14px 6px', objectFit: 'contain' }} />
+                  <img src="/logo.png" alt="NeoGrid" style={{ height: 30, width: 'auto', display: 'block', margin: '2px 0 14px 6px', objectFit: 'contain' }} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {MODULES.map((m, i) => (
                       <div
@@ -284,14 +284,14 @@ export default function Login() {
               <div style={{ maxWidth: 392, width: '100%', margin: '0 auto', animation: 'lx-fadeUp .8s ease both' }}>
 
                 {/* Logo */}
-                <img src="/logo.png" alt="LedgerX" style={{ height: 72, width: 'auto', display: 'block', marginBottom: 20, objectFit: 'contain' }} />
+                <img src="/logo.png" alt="NeoGrid" style={{ height: 72, width: 'auto', display: 'block', marginBottom: 20, objectFit: 'contain' }} />
 
                 {/* Heading */}
                 <h1 style={{ margin: '0 0 6px', fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', color: '#1d1a36' }}>
                   {mode === 'login' ? 'Welcome back' : 'Create account'}
                 </h1>
                 <p style={{ margin: '0 0 24px', fontSize: 14.5, color: '#85839c' }}>
-                  {mode === 'login' ? 'Sign in to access your workspace' : 'Get started with LedgerX today'}
+                  {mode === 'login' ? 'Sign in to access your workspace' : 'Get started with NeoGrid today'}
                 </p>
 
                 {/* Alerts */}
@@ -397,7 +397,7 @@ export default function Login() {
           {/* ── FOOTER ── */}
           <div style={{ borderTop: '1px solid #f0eff7', padding: '14px 52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, background: '#fcfcff', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-              <span style={{ fontSize: 12.5, color: '#8a889e' }}>© 2025 LedgerX</span>
+              <span style={{ fontSize: 12.5, color: '#8a889e' }}>© 2025 NeoGrid</span>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#cdcad9', display: 'inline-block' }} />
               {['Privacy', 'Terms', 'Support'].map(l => (
                 <a key={l} href="#" style={{ fontSize: 12.5, color: '#8a889e', textDecoration: 'none' }}>{l}</a>

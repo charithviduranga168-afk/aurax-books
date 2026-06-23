@@ -1,7 +1,7 @@
-# LedgerX — Project Context for Claude Code
+# NeoGrid — Project Context for Claude Code
 
 ## What this project is
-Full ERP system for Sri Lankan businesses. Product name: **LedgerX**.  
+Full ERP system for Sri Lankan businesses. Product name: **NeoGrid**.  
 Stack: **React + TypeScript + Vite + Supabase**.  
 Repo: `https://github.com/charithviduranga168-afk/aurax-books`  
 Owner: Sahan Gunasekara (life.aurax@gmail.com)
@@ -197,7 +197,7 @@ Key colors: button gradient `linear-gradient(105deg,#5b59f2,#8b5cf6,#a855f7)`
 ## Logo
 
 File: `public/logo.png`  
-Type: Stacked logo — gradient "S" icon on top, "LedgerX" text below  
+Type: Stacked logo — gradient "S" icon on top, "NeoGrid" text below  
 Sizes used:
 - Sidebar open: 52px height
 - Sidebar closed: 30px height  

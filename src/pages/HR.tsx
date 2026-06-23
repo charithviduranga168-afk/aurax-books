@@ -271,7 +271,7 @@ export default function HR() {
     doc.setTextColor(255,255,255);
     doc.setFont('helvetica','bold');
     doc.setFontSize(20);
-    doc.text('LedgerX', ml, 13);
+    doc.text('NeoGrid', ml, 13);
     doc.setFontSize(9);
     doc.setFont('helvetica','normal');
     doc.text('Business Management Software', ml, 19);
@@ -452,7 +452,7 @@ export default function HR() {
     doc.setTextColor(...c('#9ca3af'));
     doc.setFontSize(7.5);
     doc.text('This is a computer-generated payslip and does not require a physical signature.', W/2, 290, { align: 'center' });
-    doc.text('LedgerX  ·  Confidential', W/2, 294, { align: 'center' });
+    doc.text('NeoGrid  ·  Confidential', W/2, 294, { align: 'center' });
 
     doc.save(`Payslip_${ps.emp_number}_${MONTHS[run.month-1]}_${run.year}.pdf`);
   }

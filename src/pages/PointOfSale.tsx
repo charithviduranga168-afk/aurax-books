@@ -264,7 +264,7 @@ export default function PointOfSale({ nav }: Props) {
     }
     doc.text('─'.repeat(44), 40, y, { align: 'center' }); y += 4;
     doc.text('Thank you!', 40, y, { align: 'center' }); y += 3;
-    doc.text('Powered by LedgerX', 40, y, { align: 'center' });
+    doc.text('Powered by NeoGrid', 40, y, { align: 'center' });
     doc.save(r.sale_number + '.pdf');
   }
 
