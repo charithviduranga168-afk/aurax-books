@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import md5 from 'md5';
 import { StatusBar } from '../components/StatusBar';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
 import type { NavFilter, Page } from '../App';
 import { Chatter, logChatter } from '../components/Chatter';
 import {
@@ -94,7 +95,7 @@ interface InvFavorite { name: string; statusFilter: string; groupByVal: string; 
 function loadInvFavorites(): InvFavorite[] { try { return JSON.parse(localStorage.getItem('inv_favorites') || '[]'); } catch { return []; } }
 function saveInvFavorites(favs: InvFavorite[]) { localStorage.setItem('inv_favorites', JSON.stringify(favs)); }
 
-export default function Invoices({ prefillFromSO, onConsumeSoPrefill, navFilter, onConsumeFilter }: Props) {
+export default function Invoices({ prefillFromSO, onConsumeSoPrefill, navFilter, onConsumeFilter, navTo }: Props) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [selectedLines, setSelectedLines] = useState<any[]>([]);
@@ -484,6 +485,20 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill, navFilter,
             </div>
           </div>
         </div>
+
+        <SmartButtons>
+          <SmartButton
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>}
+            value={selectedReceipts.length}
+            label="Receipts"
+            onClick={navTo && selected ? () => navTo('receipts', { field: 'invoice_id', value: selected.id, label: selected.invoice_number }) : undefined}
+          />
+          <SmartButton
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>}
+            value={0}
+            label="Journal Entries"
+          />
+        </SmartButtons>
 
         <StatusBar steps={['Unpaid', 'Partial', 'Paid']} current={selected.status === 'Overdue' ? 'Unpaid' : selected.status} />
 

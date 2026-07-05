@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { StatusBar } from '../components/StatusBar';
+import { SmartButton, SmartButtons } from '../components/SmartButton';
 import { Chatter, logChatter } from '../components/Chatter';
 import {
   DollarSign, AlertCircle, Clock, CheckCircle,
@@ -69,7 +70,7 @@ function exportExcel(data: any[], filename: string) {
   XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, navFilter, onConsumeFilter }: Props = {}) {
+export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, navFilter, onConsumeFilter, navTo }: Props = {}) {
   const [bills, setBills] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -97,6 +98,7 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, 
   const [selected, setSelected] = useState<any>(null);
   const [selectedLines, setSelectedLines] = useState<any[]>([]);
   const [selectedGrns, setSelectedGrns] = useState<any[]>([]);
+  const [linkedPayments, setLinkedPayments] = useState<any[]>([]);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -152,12 +154,14 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, 
 
   async function openDetail(bill: any) {
     setSelected(bill);
-    const [{ data: lineData }, { data: grnData }] = await Promise.all([
+    const [{ data: lineData }, { data: grnData }, { data: payData }] = await Promise.all([
       supabase.from('bill_lines').select('*').eq('bill_id', bill.id),
       supabase.from('grn_headers').select('*').eq('bill_id', bill.id),
+      supabase.from('payments').select('id').eq('bill_id', bill.id),
     ]);
     setSelectedLines(lineData || []);
     setSelectedGrns(grnData || []);
+    setLinkedPayments(payData || []);
     setView('detail');
   }
 
@@ -419,6 +423,26 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, 
             </div>
           </div>
         </div>
+
+        <SmartButtons>
+          <SmartButton
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>}
+            value={linkedPayments.length}
+            label="Payments"
+            onClick={navTo && bill ? () => navTo('payments', { field: 'supplier_id', value: bill.supplier_id, label: bill.bill_number }) : undefined}
+          />
+          <SmartButton
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 3h15v13H1z"/><path d="M16 8l4 0 3 3v6h-7V8z"/></svg>}
+            value={selectedGrns.length}
+            label="GRN"
+            onClick={navTo && bill ? () => navTo('grn', { field: 'purchase_order_id', value: bill.purchase_order_id, label: bill.bill_number }) : undefined}
+          />
+          <SmartButton
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>}
+            value={0}
+            label="Journal Entries"
+          />
+        </SmartButtons>
 
         <StatusBar steps={['Unpaid', 'Partial', 'Paid']} current={bill.status} />
         {flowBar(bill, selectedGrns[0] || null)}
