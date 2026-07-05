@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { NavFilter } from '../App';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -37,7 +38,7 @@ const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB') : '�
 
 const STATUS_COLOR: Record<string, string> = { Draft: '#6b7280', Posted: '#059669' };
 
-export default function JournalEntries() {
+export default function JournalEntries({ navFilter, onConsumeFilter }: { navFilter?: NavFilter | null; onConsumeFilter?: () => void } = {}) {
   const [entries, setEntries] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
@@ -56,9 +57,12 @@ export default function JournalEntries() {
   const [selected, setSelected] = useState<any>(null);
   const [detailLines, setDetailLines] = useState<any[]>([]);
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
+
   useEffect(() => {
     loadData();
   }, []);
+  useEffect(() => { if (navFilter) { setNavFilterActive(navFilter); onConsumeFilter?.(); } }, [navFilter]);
 
   useEffect(() => {
     if (view === 'detail' && selected) {
@@ -398,11 +402,11 @@ export default function JournalEntries() {
     doc.save(entry.entry_number + '.pdf');
   }
 
-  const filtered = entries.filter(
-    (e) =>
-      (e.entry_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (e.description || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = entries.filter((e) => {
+    if (navFilterActive?.field === 'source_id') return e.source_id === navFilterActive.value;
+    return (e.entry_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.description || '').toLowerCase().includes(search.toLowerCase());
+  });
 
   // ── DETAIL VIEW ──
   if (view === 'detail' && selected) {

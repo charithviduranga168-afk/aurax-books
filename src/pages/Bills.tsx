@@ -20,10 +20,14 @@ interface LineItem {
   line_total: number;
 }
 
+import type { NavFilter, Page } from '../App';
 interface Props {
   onCreateGrn?: (bill: any, lines: any[]) => void;
   prefillFromPO?: { po: any; lines: any[] } | null;
   onConsumePOPrefill?: () => void;
+  navFilter?: NavFilter | null;
+  onConsumeFilter?: () => void;
+  navTo?: (p: Page, filter?: NavFilter) => void;
 }
 
 const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
@@ -65,7 +69,7 @@ function exportExcel(data: any[], filename: string) {
   XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }: Props = {}) {
+export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill, navFilter, onConsumeFilter }: Props = {}) {
   const [bills, setBills] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -105,7 +109,10 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
     { product_id: '', product_name: '', qty: 1, unit_cost: 0, line_total: 0 },
   ]);
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
+
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (navFilter) { setNavFilterActive(navFilter); onConsumeFilter?.(); } }, [navFilter]);
   useEffect(() => {
     try { setFavorites(JSON.parse(localStorage.getItem('lx_bills_favorites') || '[]')); } catch { setFavorites([]); }
   }, []);
@@ -320,6 +327,10 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
   ];
 
   const filtered = bills.filter(b => {
+    if (navFilterActive) {
+      if (navFilterActive.field === 'supplier_id') return b.supplier_id === navFilterActive.value;
+      if (navFilterActive.field === 'purchase_order_id') return b.purchase_order_id === navFilterActive.value;
+    }
     const matchSearch = (b.bill_number || '').toLowerCase().includes(search.toLowerCase()) || (b.supplier_name || '').toLowerCase().includes(search.toLowerCase());
     const isOverdue = b.status !== 'Paid' && new Date(b.due_date) < today;
     const matchFilter = !activeFilter || b.status === activeFilter || (activeFilter === 'Overdue' && isOverdue);
@@ -517,13 +528,21 @@ export default function Bills({ onCreateGrn, prefillFromPO, onConsumePOPrefill }
         ))}
       </div>
 
-      {activeFilter && (
+      {(activeFilter || navFilterActive) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ padding: '4px 12px', borderRadius: 20, background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-            {activeFilter}
-            <button onClick={() => setActiveFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', padding: 0, display: 'flex' }}><X size={12} /></button>
-          </span>
-          <button onClick={() => setActiveFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12 }}>Clear all</button>
+          {navFilterActive && (
+            <span style={{ padding: '4px 12px', borderRadius: 20, background: '#ede9fe', color: 'var(--brand)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {navFilterActive.label ? `Supplier: ${navFilterActive.label}` : 'Filtered'}
+              <button onClick={() => setNavFilterActive(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', padding: 0, display: 'flex' }}><X size={12} /></button>
+            </span>
+          )}
+          {activeFilter && (
+            <span style={{ padding: '4px 12px', borderRadius: 20, background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {activeFilter}
+              <button onClick={() => setActiveFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand)', padding: 0, display: 'flex' }}><X size={12} /></button>
+            </span>
+          )}
+          <button onClick={() => { setActiveFilter(''); setNavFilterActive(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 12 }}>Clear all</button>
         </div>
       )}
 

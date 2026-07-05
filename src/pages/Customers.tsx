@@ -22,7 +22,8 @@ interface Customer {
   created_at: string;
 }
 
-interface Props { onBack?: () => void; }
+import type { NavFilter, Page } from '../App';
+interface Props { onBack?: () => void; navTo?: (p: Page, filter?: NavFilter) => void; }
 
 const fmt = (n: number) =>
   'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
@@ -69,8 +70,9 @@ function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 // ── Customer Detail ───────────────────────────────────────────────
-function CustomerDetail({ customer, onBack, onEdit, onDelete }: {
+function CustomerDetail({ customer, onBack, onEdit, onDelete, navTo }: {
   customer: Customer; onBack: () => void; onEdit: () => void; onDelete: () => void;
+  navTo?: (p: Page, filter?: NavFilter) => void;
 }) {
   const [tab, setTab] = useState<'invoices' | 'payments' | 'salesorders'>('invoices');
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -196,8 +198,10 @@ function CustomerDetail({ customer, onBack, onEdit, onDelete }: {
       </div>
 
       <SmartButtons>
-        <SmartButton icon={<ShoppingCart size={18} />} value={salesOrders.length} label="Sales Orders" onClick={() => setTab('salesorders')} />
-        <SmartButton icon={<FileText size={18} />} value={invoices.length} label="Invoices" onClick={() => setTab('invoices')} />
+        <SmartButton icon={<ShoppingCart size={18} />} value={salesOrders.length} label="Sales Orders"
+          onClick={navTo ? () => navTo('salesorders', { field: 'customer_id', value: customer.id, label: customer.name }) : () => setTab('salesorders')} />
+        <SmartButton icon={<FileText size={18} />} value={invoices.length} label="Invoices"
+          onClick={navTo ? () => navTo('invoices', { field: 'customer_id', value: customer.id, label: customer.name }) : () => setTab('invoices')} />
         <SmartButton icon={<Receipt size={18} />} value={receipts.length} label="Receipts" onClick={() => setTab('payments')} />
         <SmartButton icon={<Wallet size={18} />} value={receipts.length} label="Payments" onClick={() => setTab('payments')} />
       </SmartButtons>
@@ -366,7 +370,7 @@ function saveFavorites(favs: Favorite[]) {
 }
 
 // ── Customers List ────────────────────────────────────────────────
-export default function Customers({ onBack }: Props) {
+export default function Customers({ onBack, navTo }: Props) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'analytics'>('list');
   const [selected, setSelected] = useState<Customer | null>(null);
@@ -574,6 +578,7 @@ export default function Customers({ onBack }: Props) {
         onBack={() => { setView('list'); setSelected(null); }}
         onEdit={() => openEdit(selected)}
         onDelete={() => handleDelete(selected.id)}
+        navTo={navTo}
       />
     );
   }

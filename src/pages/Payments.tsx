@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import type { NavFilter } from '../App';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -14,7 +15,7 @@ function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
-export default function Payments() {
+export default function Payments({ navFilter, onConsumeFilter }: { navFilter?: NavFilter | null; onConsumeFilter?: () => void } = {}) {
   const [payments, setPayments] = useState<any[]>([]);
   const [bills, setBills] = useState<any[]>([]);
   const [allBills, setAllBills] = useState<any[]>([]);
@@ -40,7 +41,9 @@ export default function Payments() {
     notes: '',
   });
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (navFilter) { setNavFilterActive(navFilter); onConsumeFilter?.(); } }, [navFilter]);
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -195,10 +198,11 @@ export default function Payments() {
     doc.save(pay.payment_number + '.pdf');
   }
 
-  const filtered = payments.filter(p =>
-    (p.payment_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.supplier_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = payments.filter(p => {
+    if (navFilterActive?.field === 'supplier_id') return p.supplier_id === navFilterActive.value;
+    return (p.payment_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.supplier_name || '').toLowerCase().includes(search.toLowerCase());
+  });
 
   // ── Detail view ──
   if (view === 'detail' && selected) {

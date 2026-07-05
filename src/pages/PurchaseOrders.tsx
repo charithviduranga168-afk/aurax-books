@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Page } from '../App';
+import type { Page, NavFilter } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
 import {
@@ -28,6 +28,7 @@ interface Props {
   onReceiveProducts?: (po: any, lines: any[]) => void;
   onCreateBill?: (po: any, lines: any[]) => void;
   nav?: (p: Page) => void;
+  navTo?: (p: Page, filter?: NavFilter) => void;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -68,7 +69,7 @@ function exportExcel(data: any[], filename: string) {
   XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }: Props) {
+export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav, navTo }: Props) {
   const [pos, setPos] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -504,7 +505,8 @@ export default function PurchaseOrders({ onReceiveProducts, onCreateBill, nav }:
         </div>
 
         <SmartButtons>
-          <SmartButton icon={<Package size={18} />} value={linkedGrns.length} label="Receipts (GRN)" />
+          <SmartButton icon={<Package size={18} />} value={linkedGrns.length} label="Receipts (GRN)"
+            onClick={navTo && po ? () => navTo('grn', { field: 'purchase_order_id', value: po.id, label: po.po_number }) : undefined} />
           <SmartButton icon={<List size={18} />} value={selectedLines.length} label="Line Items" />
         </SmartButtons>
 

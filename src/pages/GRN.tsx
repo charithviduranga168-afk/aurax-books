@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Page } from '../App';
+import type { Page, NavFilter } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { Chatter, logChatter } from '../components/Chatter';
 
@@ -20,6 +20,8 @@ interface Props {
   nav?: (p: Page) => void;
   prefill?: { bill: any; lines: any[] } | null;
   onConsumePrefill?: () => void;
+  navFilter?: NavFilter | null;
+  onConsumeFilter?: () => void;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -39,7 +41,7 @@ function BackBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
 
-export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
+export default function GRN({ nav, prefill, onConsumePrefill, navFilter, onConsumeFilter }: Props) {
   const [grns, setGrns] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [company, setCompany] = useState<any>({});
@@ -68,7 +70,9 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
   function showConfirm(message: string, onConfirm: () => void) { setDialog({ message, onConfirm }); }
   const clampNonNeg = (v: string) => Math.max(0, parseFloat(v) || 0);
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (navFilter) { setNavFilterActive(navFilter); onConsumeFilter?.(); } }, [navFilter]);
 
   useEffect(() => {
     if (!prefill) return;
@@ -321,11 +325,12 @@ export default function GRN({ nav, prefill, onConsumePrefill }: Props) {
     );
   }
 
-  const filtered = grns.filter(g =>
-    (g.grn_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (g.supplier_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (g.bill_number || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = grns.filter(g => {
+    if (navFilterActive?.field === 'purchase_order_id') return g.purchase_order_id === navFilterActive.value;
+    return (g.grn_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (g.supplier_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (g.bill_number || '').toLowerCase().includes(search.toLowerCase());
+  });
 
   // ── Detail view ──
   if (view === 'detail' && selected) {

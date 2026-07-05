@@ -79,6 +79,13 @@ import PublicStore from './pages/PublicStore';
 import MRP from './pages/MRP';
 import './App.css';
 
+export interface NavFilter {
+  field: string;   // e.g. 'customer_id', 'purchase_order_id', 'invoice_id'
+  value: string;   // the ID to filter by
+  label?: string;  // display label e.g. 'SO-0042'
+  openId?: string; // if set, directly open this record in detail view
+}
+
 export type Page =
   | 'dashboard'
   | 'customers'
@@ -190,6 +197,7 @@ export default function App() {
   const [grnPrefill, setGrnPrefill] = useState<{ bill: any; lines: any[] } | null>(null);
   const [billPrefill, setBillPrefill] = useState<{ po: any; lines: any[] } | null>(null);
   const [invoicePrefill, setInvoicePrefill] = useState<{ so: any; lines: any[] } | null>(null);
+  const [navFilter, setNavFilter] = useState<NavFilter | null>(null);
 
   // URL params — checked after hooks, before auth renders
   const urlParams = new URLSearchParams(window.location.search);
@@ -263,6 +271,11 @@ export default function App() {
     if (group) setOpenGroups(prev => prev.includes(group.label) ? prev : [...prev, group.label]);
   };
 
+  const navTo = (p: Page, filter?: NavFilter) => {
+    setNavFilter(filter ?? null);
+    nav(p);
+  };
+
   const exitModule = () => {
     setModuleMode(false);
     setPage('dashboard');
@@ -278,9 +291,9 @@ export default function App() {
       case 'dashboard':
         return <Dashboard nav={nav} />;
       case 'customers':
-        return <Customers onBack={exitModule} />;
+        return <Customers onBack={exitModule} navTo={navTo} />;
       case 'suppliers':
-        return <Suppliers />;
+        return <Suppliers navTo={navTo} />;
       case 'products':
         return <Products />;
       case 'inventory':
@@ -289,6 +302,7 @@ export default function App() {
         return (
           <SalesOrders
             nav={nav}
+            navTo={navTo}
             onCreateInvoice={(so, lines) => {
               setInvoicePrefill({ so, lines });
               setPage('invoices');
@@ -300,14 +314,18 @@ export default function App() {
           <Invoices
             prefillFromSO={invoicePrefill}
             onConsumeSoPrefill={() => setInvoicePrefill(null)}
+            navFilter={navFilter}
+            onConsumeFilter={() => setNavFilter(null)}
+            navTo={navTo}
           />
         );
       case 'receipts':
-        return <Receipts />;
+        return <Receipts navFilter={navFilter} onConsumeFilter={() => setNavFilter(null)} />;
       case 'purchaseorders':
         return (
           <PurchaseOrders
             nav={nav}
+            navTo={navTo}
             onReceiveProducts={(po, lines) => {
               setGrnPrefill({
                 bill: { id: null, bill_number: po.po_number, supplier_id: po.supplier_id, supplier_name: po.supplier_name },
@@ -330,10 +348,13 @@ export default function App() {
             }}
             prefillFromPO={billPrefill}
             onConsumePOPrefill={() => setBillPrefill(null)}
+            navFilter={navFilter}
+            onConsumeFilter={() => setNavFilter(null)}
+            navTo={navTo}
           />
         );
       case 'payments':
-        return <Payments />;
+        return <Payments navFilter={navFilter} onConsumeFilter={() => setNavFilter(null)} />;
       case 'expenses':
         return <Expenses />;
       case 'grn':
@@ -342,10 +363,12 @@ export default function App() {
             nav={nav}
             prefill={grnPrefill}
             onConsumePrefill={() => setGrnPrefill(null)}
+            navFilter={navFilter}
+            onConsumeFilter={() => setNavFilter(null)}
           />
         );
       case 'journal':
-        return <JournalEntries />;
+        return <JournalEntries navFilter={navFilter} onConsumeFilter={() => setNavFilter(null)} />;
       case 'reports':
         return <Reports />;
       case 'manufacturing':

@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Page } from '../App';
+import type { Page, NavFilter } from '../App';
 import { StatusBar } from '../components/StatusBar';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
 import { Chatter, logChatter } from '../components/Chatter';
@@ -28,6 +28,7 @@ interface SoLine {
 interface Props {
   onCreateInvoice?: (so: any, lines: any[]) => void;
   nav?: (p: Page) => void;
+  navTo?: (p: Page, filter?: NavFilter) => void;
 }
 
 const STATUS_STEPS = ['Draft', 'Confirmed', 'Invoiced'];
@@ -94,7 +95,7 @@ function saveSoFavorites(favs: SoFavorite[]) {
   localStorage.setItem('so_favorites', JSON.stringify(favs));
 }
 
-export default function SalesOrders({ onCreateInvoice }: Props) {
+export default function SalesOrders({ onCreateInvoice, navTo }: Props) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedLines, setSelectedLines] = useState<SoLine[]>([]);
@@ -513,7 +514,8 @@ export default function SalesOrders({ onCreateInvoice }: Props) {
         </div>
 
         <SmartButtons>
-          <SmartButton icon={<FileText size={18} />} value={linkedInvoice ? 1 : 0} label="Invoice" />
+          <SmartButton icon={<FileText size={18} />} value={linkedInvoice ? 1 : 0} label="Invoice"
+            onClick={navTo && selected?.invoice_id ? () => navTo('invoices', { field: 'id', value: selected.invoice_id, openId: selected.invoice_id, label: linkedInvoice?.invoice_number }) : undefined} />
           <SmartButton icon={<List size={18} />} value={selectedLines.length} label="Line Items" />
         </SmartButtons>
 

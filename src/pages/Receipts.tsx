@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { NavFilter } from '../App';
 import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import jsPDF from 'jspdf';
@@ -54,7 +55,7 @@ interface RecFavorite { name: string; methodFilter: string; groupByVal: string; 
 function loadRecFavorites(): RecFavorite[] { try { return JSON.parse(localStorage.getItem('rec_favorites') || '[]'); } catch { return []; } }
 function saveRecFavorites(favs: RecFavorite[]) { localStorage.setItem('rec_favorites', JSON.stringify(favs)); }
 
-export default function Receipts() {
+export default function Receipts({ navFilter, onConsumeFilter }: { navFilter?: NavFilter | null; onConsumeFilter?: () => void } = {}) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<any | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
@@ -90,7 +91,9 @@ export default function Receipts() {
   const groupByRef = useRef<HTMLDivElement>(null);
   const favRef = useRef<HTMLDivElement>(null);
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (navFilter) { setNavFilterActive(navFilter); onConsumeFilter?.(); } }, [navFilter]);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -235,6 +238,8 @@ export default function Receipts() {
   const avgReceipt = receipts.length > 0 ? totalCollected / receipts.length : 0;
 
   const filtered = receipts.filter(r => {
+    if (navFilterActive?.field === 'invoice_id') return r.invoice_id === navFilterActive.value;
+    if (navFilterActive?.field === 'customer_id') return r.customer_id === navFilterActive.value;
     const matchSearch = (r.receipt_number || '').toLowerCase().includes(search.toLowerCase()) || (r.customer_name || '').toLowerCase().includes(search.toLowerCase());
     const matchMethod = !filterMethod || (r.payment_method || '').toLowerCase().includes(filterMethod.toLowerCase());
     return matchSearch && matchMethod;
@@ -470,15 +475,21 @@ export default function Receipts() {
       )}
 
       {/* Active filter chips */}
-      {activeFilterCount > 0 && (
+      {(activeFilterCount > 0 || navFilterActive) && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {navFilterActive && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: '#ede9fe', color: 'var(--brand)', fontSize: 12, fontWeight: 600 }}>
+              {navFilterActive.label ? `Filtered: ${navFilterActive.label}` : 'Filtered'}
+              <button onClick={() => setNavFilterActive(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0, color: 'var(--brand)' }}><X size={12} /></button>
+            </span>
+          )}
           {filterMethod && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 12, fontWeight: 600 }}>
               Method: {filterMethod}
               <button onClick={() => setFilterMethod('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0, color: 'var(--brand)' }}><X size={12} /></button>
             </span>
           )}
-          <button onClick={() => setFilterMethod('')} style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Clear all</button>
+          <button onClick={() => { setFilterMethod(''); setNavFilterActive(null); }} style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Clear all</button>
         </div>
       )}
 

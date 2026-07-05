@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { SmartButton, SmartButtons } from '../components/SmartButton';
 import { Chatter } from '../components/Chatter';
+import type { NavFilter, Page } from '../App';
 
 interface Supplier {
   id: string;
@@ -50,7 +51,7 @@ function exportExcel(data: any[], filename: string) {
   XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-export default function Suppliers() {
+export default function Suppliers({ navTo }: { navTo?: (p: Page, filter?: NavFilter) => void }) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -275,9 +276,12 @@ export default function Suppliers() {
         </div>
 
         <SmartButtons>
-          <SmartButton icon={<ClipboardList size={18} />} value={detailPOs.length} label="Purchase Orders" />
-          <SmartButton icon={<FileText size={18} />} value={detailBills.length} label="Bills" />
-          <SmartButton icon={<CreditCard size={18} />} value={detailPayments.length} label="Payments" />
+          <SmartButton icon={<ClipboardList size={18} />} value={detailPOs.length} label="Purchase Orders"
+            onClick={navTo && selected ? () => navTo('purchaseorders', { field: 'supplier_id', value: selected.id, label: selected.name }) : undefined} />
+          <SmartButton icon={<FileText size={18} />} value={detailBills.length} label="Bills"
+            onClick={navTo && selected ? () => navTo('bills', { field: 'supplier_id', value: selected.id, label: selected.name }) : undefined} />
+          <SmartButton icon={<CreditCard size={18} />} value={detailPayments.length} label="Payments"
+            onClick={navTo && selected ? () => navTo('payments', { field: 'supplier_id', value: selected.id, label: selected.name }) : undefined} />
           <SmartButton icon={<Wallet size={18} />} value={fmt(detailKpi.outstanding)} label="Outstanding" forceActive={detailKpi.outstanding > 0} />
         </SmartButtons>
 

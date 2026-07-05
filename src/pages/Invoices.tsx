@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import md5 from 'md5';
 import { StatusBar } from '../components/StatusBar';
+import type { NavFilter, Page } from '../App';
 import { Chatter, logChatter } from '../components/Chatter';
 import {
   Wallet, AlertCircle, Clock, CheckCircle,
@@ -43,6 +44,9 @@ interface LineItem {
 interface Props {
   prefillFromSO?: { so: any; lines: any[] } | null;
   onConsumeSoPrefill?: () => void;
+  navFilter?: NavFilter | null;
+  onConsumeFilter?: () => void;
+  navTo?: (p: Page, filter?: NavFilter) => void;
 }
 
 const fmt = (n: number) => 'Rs. ' + (n || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 });
@@ -90,7 +94,7 @@ interface InvFavorite { name: string; statusFilter: string; groupByVal: string; 
 function loadInvFavorites(): InvFavorite[] { try { return JSON.parse(localStorage.getItem('inv_favorites') || '[]'); } catch { return []; } }
 function saveInvFavorites(favs: InvFavorite[]) { localStorage.setItem('inv_favorites', JSON.stringify(favs)); }
 
-export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
+export default function Invoices({ prefillFromSO, onConsumeSoPrefill, navFilter, onConsumeFilter }: Props) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [selectedLines, setSelectedLines] = useState<any[]>([]);
@@ -130,6 +134,8 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
   const [favName, setFavName] = useState('');
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
 
+  const [navFilterActive, setNavFilterActive] = useState<NavFilter | null>(null);
+
   const filterRef = useRef<HTMLDivElement>(null);
   const groupByRef = useRef<HTMLDivElement>(null);
   const favRef = useRef<HTMLDivElement>(null);
@@ -138,6 +144,20 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
     loadData();
     if (prefillFromSO) onConsumeSoPrefill?.();
   }, []);
+
+  useEffect(() => {
+    if (navFilter) {
+      setNavFilterActive(navFilter);
+      onConsumeFilter?.();
+    }
+  }, [navFilter]);
+
+  useEffect(() => {
+    if (navFilterActive?.openId && invoices.length > 0) {
+      const inv = invoices.find(i => i.id === navFilterActive.openId);
+      if (inv) openDetail(inv);
+    }
+  }, [invoices, navFilterActive?.openId]);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -354,6 +374,9 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
   }
 
   const filtered = invoices.filter(inv => {
+    if (navFilterActive && !navFilterActive.openId) {
+      if (navFilterActive.field === 'customer_id') return inv.customer_id === navFilterActive.value;
+    }
     const matchSearch = (inv.invoice_number || '').toLowerCase().includes(search.toLowerCase()) || (inv.customer_name || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = !filterStatus || inv.status === filterStatus;
     return matchSearch && matchStatus;
@@ -645,15 +668,21 @@ export default function Invoices({ prefillFromSO, onConsumeSoPrefill }: Props) {
       )}
 
       {/* Active filter chips */}
-      {activeFilterCount > 0 && (
+      {(activeFilterCount > 0 || navFilterActive) && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {navFilterActive && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: '#ede9fe', color: 'var(--brand)', fontSize: 12, fontWeight: 600 }}>
+              {navFilterActive.label ? `Customer: ${navFilterActive.label}` : 'Filtered'}
+              <button onClick={() => setNavFilterActive(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0, color: 'var(--brand)' }}><X size={12} /></button>
+            </span>
+          )}
           {filterStatus && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: 'var(--brand-light)', color: 'var(--brand)', fontSize: 12, fontWeight: 600 }}>
               Status: {filterStatus}
               <button onClick={() => setFilterStatus('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0, color: 'var(--brand)' }}><X size={12} /></button>
             </span>
           )}
-          <button onClick={() => setFilterStatus('')} style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Clear all</button>
+          <button onClick={() => { setFilterStatus(''); setNavFilterActive(null); }} style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Clear all</button>
         </div>
       )}
 
