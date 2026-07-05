@@ -142,6 +142,29 @@ function statusBadge(s: string) { /* colored pill by status string */ }
 | GRN | ✓ | ✓ |
 | All other modules | Pending | Pending |
 
+### Linked-Doc Smart Buttons — IN PROGRESS
+
+NeoGrid-style compact pill buttons in the detail view hero card area showing counts of related documents. Clicking navigates to that module's list pre-filtered to the current record.
+
+**Visual:** Horizontal pill — icon + count + label inline (not tall card). Active (count > 0) = lavender bg + purple border + purple text. Inactive = gray.
+
+**Parts:**
+- Part 1 — Redesign `SmartButton` component → compact horizontal pill style
+- Part 2 — Navigation wiring: thread `nav(page)` + `{ field, value }` filter context from App.tsx into detail views
+- Part 3 — Non-JE linked doc counts (FK columns already exist):
+  - SO → Invoices (`invoices.sales_order_id`), Receipts (via invoice), Journal Entries
+  - Customer → Sales Orders, Invoices
+  - PO → Bills (`bills.purchase_order_id`), GRN (`grns.purchase_order_id`), Payments, Journal Entries
+  - Supplier → Purchase Orders, Bills
+  - Invoice → Receipts, Journal Entries
+  - Bill → Payments, Journal Entries
+  - Receipts / Payments → Journal Entries
+- Part 4 — JE schema addition: add `source_type text` + `source_id text` to `journal_entries` table in Supabase so JE counts can be fetched per source document
+- Part 5 — JE linked doc counts using `source_type` + `source_id`
+- Part 6 — Roll out to all detail views
+
+**Status:** Planning complete, not yet started.
+
 ### Other potential tasks:
 - Apply redesign to remaining modules (Products, Inventory, HR, etc.)
 - Customer portal improvements
