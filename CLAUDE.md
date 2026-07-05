@@ -149,8 +149,14 @@ NeoGrid-style compact pill buttons in the detail view hero card area showing cou
 **Visual:** Horizontal pill — icon + count + label inline (not tall card). Active (count > 0) = lavender bg + purple border + purple text. Inactive = gray.
 
 **Parts:**
-- Part 1 — Redesign `SmartButton` component → compact horizontal pill style
-- Part 2 — Navigation wiring: thread `nav(page)` + `{ field, value }` filter context from App.tsx into detail views
+- Part 1 — Redesign `SmartButton` component → compact horizontal pill style ✓ DONE
+- Part 2 — Navigation wiring: thread `nav(page)` + `{ field, value }` filter context from App.tsx into detail views ✓ DONE
+  - `NavFilter` type exported from App.tsx: `{ field, value, label?, openId? }`
+  - `navTo(page, filter?)` function in App.tsx alongside `nav()`
+  - Source modules with `navTo` prop: Customers, SalesOrders, Suppliers, PurchaseOrders
+  - Target modules with `navFilter`+`onConsumeFilter` props: Invoices, Receipts, Bills, Payments, GRN, JournalEntries
+  - Each target module: `navFilterActive` state + useEffect + filter chip UI (lavender pill, × to clear)
+  - Invoices: `openId` support — auto-opens specific invoice in detail view when navigating from SO
 - Part 3 — Non-JE linked doc counts (FK columns already exist):
   - SO → Invoices (`invoices.sales_order_id`), Receipts (via invoice), Journal Entries
   - Customer → Sales Orders, Invoices
